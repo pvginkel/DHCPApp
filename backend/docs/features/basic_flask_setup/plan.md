@@ -22,9 +22,10 @@ The basic setup will follow the specified technology stack (Python with Flask we
 - File and folder path configuration for dnsmasq lease file and configuration directories (as specified: "paths configured via environment variables")
 
 **requirements.txt** - Python dependency management
-- Flask web framework
+- Flask web framework (unpinned as specified in cursorrules)
 - python-dotenv for environment variable management
 - Additional dependencies for SSE and API development
+- All packages without version pinning
 
 **.env.example** - Environment variable template
 - Example configuration for lease file and config folder paths
@@ -40,7 +41,7 @@ The basic setup will follow the specified technology stack (Python with Flask we
 
 **app/models/__init__.py** - Models package
 - Base model classes following OOP design
-- Future DHCP lease and configuration models structure
+- Structure for current requirements only (no future scaffolding per cursorrules)
 
 **app/api/__init__.py** - API package initialization
 - RESTful API blueprint setup
@@ -53,15 +54,17 @@ The basic setup will follow the specified technology stack (Python with Flask we
 **app/api/v1/routes.py** - Basic API routes
 - Health check endpoint
 - Basic status endpoint
-- Placeholder structure for future DHCP endpoints
+- Python logging implementation
+- No placeholder code for future features (per cursorrules)
 
 **app/services/__init__.py** - Services package
 - Business logic layer following OOP principles
-- Service class structure for future DHCP monitoring
+- Service class structure for current requirements only (no future scaffolding per cursorrules)
+- Python logging implementation instead of print statements
 
 **app/utils/__init__.py** - Utilities package
-- Helper functions and utilities
-- Common functionality shared across the application
+- Essential utilities for current implementation only
+- No helper methods for future use (per cursorrules)
 
 ### Development Files
 
@@ -71,16 +74,15 @@ The basic setup will follow the specified technology stack (Python with Flask we
 - Entry point for local development
 
 **.gitignore** - Git version control exclusions
-- Python-specific ignores (__pycache__, .pyc files)
-- Virtual environment exclusion (.venv)
-- Environment files (.env)
+- Brief as possible per cursorrules
+- Essential Python ignores only (__pycache__, .venv, .env)
 
 ## Implementation Steps
 
 ### Phase 1: Basic Project Structure
 1. Create directory structure with app package and subpackages
 2. Set up Python virtual environment (.venv) as specified
-3. Create requirements.txt with Flask and essential dependencies
+3. Create requirements.txt with unpinned Flask and essential dependencies (per cursorrules)
 4. Initialize Git repository with appropriate .gitignore
 
 ### Phase 2: Flask Application Foundation
@@ -96,10 +98,10 @@ The basic setup will follow the specified technology stack (Python with Flask we
 4. Establish RESTful API patterns
 
 ### Phase 4: OOP Foundation
-1. Create base service classes in app/services/
-2. Set up model structure in app/models/ for future DHCP entities
-3. Implement utility classes in app/utils/
-4. Establish inheritance patterns for future feature development
+1. Create base service classes in app/services/ with Python logging
+2. Set up model structure in app/models/ for current requirements only
+3. Implement essential utility classes in app/utils/ (no future scaffolding)
+4. Establish inheritance patterns for current needs only
 
 ### Phase 5: Environment Preparation
 1. Create environment variable template (.env.example)
@@ -141,9 +143,9 @@ The basic setup will follow the specified technology stack (Python with Flask we
 
 ## Dependencies (requirements.txt)
 
-- Flask - Web framework
-- python-dotenv - Environment variable management
-- flask-cors - CORS handling for future SPA integration
+- Flask - Web framework (unpinned per cursorrules)
+- python-dotenv - Environment variable management (unpinned)
+- flask-cors - CORS handling for future SPA integration (unpinned)
 
 ## Success Criteria
 
