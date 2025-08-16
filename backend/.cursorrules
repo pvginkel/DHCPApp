@@ -1,0 +1,5 @@
+- Tech stack: Python, Flask running on Kubernetes in production.
+- Use a Python virtual environment called `.venv`.
+- Track dependencies in `requirements.txt`.
+- Use OOP.
+- Don't start the app yourself.
