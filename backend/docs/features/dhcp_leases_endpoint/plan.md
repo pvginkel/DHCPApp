@@ -97,18 +97,18 @@ The dnsmasq lease file format follows this structure per line:
 
 ## Implementation Phases
 
-### Phase 1: ResponseHelper Refactor (Breaking Change)
-- Refactor `ResponseHelper` class in `app/utils/__init__.py` to remove `success` and `message` wrapper attributes
-- Create new methods: `data_response()` for direct data returns and `error_response()` for structured error responses
-- Update existing endpoints in `app/api/v1/routes.py` to use refactored ResponseHelper
-- Ensure all responses follow REST API best practices with proper HTTP status codes
+### Phase 1: ResponseHelper Refactor and Existing Endpoints Update
+- Replace `ResponseHelper` methods in `app/utils/__init__.py` with REST-compliant versions
+- Update `/health` and `/status` endpoints in `app/api/v1/routes.py` to return direct data
+- Remove all `success` and `message` wrapper attributes from responses
+- Ensure proper HTTP status codes are used throughout
 
 ### Phase 2: Core Data Models and Services
 - Create `DhcpLease` model class with all required fields
 - Implement `DhcpService` with file reading and parsing capabilities
 - Add comprehensive error handling for file access issues
 
-### Phase 3: REST API Endpoint
+### Phase 3: DHCP Leases REST API Endpoint
 - Create `/api/v1/leases` GET endpoint in `dhcp_routes.py`
 - Integrate with `DhcpService` to retrieve lease data
 - Return direct JSON array for success cases (HTTP 200)
@@ -118,7 +118,7 @@ The dnsmasq lease file format follows this structure per line:
 ### Phase 4: Integration and Testing
 - Register new routes with Flask blueprint
 - Update requirements.txt with any new dependencies
-- Verify endpoint functionality with sample lease files
+- Verify all endpoints functionality with proper REST responses
 - Test error handling scenarios (missing file, corrupt data, etc.)
 - Validate that all endpoints follow REST API best practices
 
@@ -145,10 +145,28 @@ The current `ResponseHelper` class wraps all responses in `success` and `message
 3. **Direct data responses:** Return actual data directly for successful operations
 4. **Structured error responses:** Use consistent error object format for failures
 
-### New ResponseHelper Methods
+### Updated ResponseHelper Methods
 
-- `data_response(data)`: Returns data directly without wrapper (for HTTP 2xx responses)
-- `error_response(message, details=None)`: Returns structured error object (for HTTP 4xx/5xx responses)
+- `success_response(data)`: Refactored to return data directly without wrapper attributes
+- `error_response(message, details=None)`: Updated to return structured error object without success wrapper
+
+### Expected Response Changes
+
+**Before (Current):**
+```json
+{
+  "success": true,
+  "data": {"status": "healthy"},
+  "message": "Service is running"
+}
+```
+
+**After (REST Compliant):**
+```json
+{
+  "status": "healthy"
+}
+```
 
 ## Dependencies
 
