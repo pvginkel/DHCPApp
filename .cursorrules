@@ -1,5 +1,5 @@
 - Tech stack: Python, Flask running on Kubernetes in production.
-- Use a Python virtual environment called `.venv`. Activate the virtual environment when creating a new terminal.
+- Use a Python virtual environment called `.venv`. Activate the virtual environment before calling Python or installing requirements.
 - Track dependencies in `requirements.txt`.
 - Use OOP.
 - Don't start the app yourself.
