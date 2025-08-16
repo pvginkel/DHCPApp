@@ -3,3 +3,4 @@
 - Track dependencies in `requirements.txt`.
 - Use OOP.
 - Don't start the app yourself.
+- Write Python type annotations.
