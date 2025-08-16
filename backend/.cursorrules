@@ -8,3 +8,4 @@
 - Keep .gitignore files as brief as possible.
 - Don't add code that may be useful in the future like helper methods or scaffolding. Only write code that is of use for the feature being implemented.
 - Use Python logging instead of print statements.
+- Explicitly exclude the `.venv` folder when running commands like `find`.

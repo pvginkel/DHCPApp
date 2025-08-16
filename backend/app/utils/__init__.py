@@ -21,42 +21,34 @@ class Logger:
 
 
 class ResponseHelper:
-    """Utility class for API response formatting."""
+    """Utility class for API response formatting following REST principles."""
     
     @staticmethod
-    def success_response(data: Any, message: Optional[str] = None) -> Dict[str, Any]:
-        """Create success response.
+    def success_response(data: Any) -> Any:
+        """Create success response with direct data return.
         
         Args:
-            data: Response data
-            message: Optional success message
+            data: Response data to return directly
             
         Returns:
-            Formatted success response
+            Data directly without wrapper attributes
         """
-        response = {
-            'success': True,
-            'data': data
-        }
-        if message:
-            response['message'] = message
-        return response
+        return data
     
     @staticmethod
-    def error_response(message: str, code: Optional[str] = None) -> Dict[str, Any]:
-        """Create error response.
+    def error_response(message: str, details: Optional[str] = None) -> Dict[str, Any]:
+        """Create structured error response.
         
         Args:
             message: Error message
-            code: Optional error code
+            details: Optional error details
             
         Returns:
-            Formatted error response
+            Structured error object
         """
         response = {
-            'success': False,
             'error': message
         }
-        if code:
-            response['code'] = code
+        if details:
+            response['details'] = details
         return response
