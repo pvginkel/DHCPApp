@@ -18,8 +18,7 @@ def health_check():
     """
     logger.info("Health check endpoint accessed")
     return jsonify(ResponseHelper.success_response(
-        data={'status': 'healthy', 'service': 'DHCP Backend API'},
-        message='Service is running'
+        {'status': 'healthy', 'service': 'DHCP Backend API'}
     ))
 
 
@@ -31,11 +30,8 @@ def status():
         JSON response with service status information
     """
     logger.info("Status endpoint accessed")
-    return jsonify(ResponseHelper.success_response(
-        data={
-            'version': '1.0.0',
-            'api_version': 'v1',
-            'description': 'DHCP Network Management API'
-        },
-        message='API status retrieved successfully'
-    ))
+    return jsonify(ResponseHelper.success_response({
+        'version': '1.0.0',
+        'api_version': 'v1',
+        'description': 'DHCP Network Management API'
+    }))
