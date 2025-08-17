@@ -2,33 +2,36 @@
 
 ## Brief Description
 
-Implement automatic TypeScript type definitions and API client generation from the backend's OpenAPI specification using openapi-typescript and openapi-fetch libraries. The feature will provide a complete development workflow that automatically generates type-safe API clients, interfaces, and validation schemas from the backend's existing OpenAPI 3.0 specification, ensuring the frontend maintains type safety and consistency with the backend API while providing an easy mechanism to update generated code when the API changes.
+Implement automatic TypeScript type definitions and API client generation from the backend's OpenAPI specification using openapi-typescript and openapi-fetch libraries with TanStack Query integration. The code generator must be completely agnostic to the API structure and generate everything solely from the OpenAPI JSON specification without any hardcoded knowledge of endpoints, schemas, or business logic. The feature will provide a complete development workflow that automatically generates type-safe API clients, TanStack Query hooks, interfaces, and validation schemas from the backend's existing OpenAPI 3.0 specification, ensuring the frontend maintains type safety and consistency with the backend API while providing an easy mechanism to update generated code when the API changes.
 
 ## Relevant Files and Functions
 
 ### Files to Create
 - `src/lib/api/generated/` - Directory for all generated code (excluded from git)
-- `src/lib/api/client.ts` - Type-safe API client wrapper using generated types
+- `src/lib/api/generated/types.ts` - Generated TypeScript interfaces (auto-generated)
+- `src/lib/api/generated/client.ts` - Generated fetch client (auto-generated)
+- `src/lib/api/generated/queries.ts` - Generated TanStack Query hooks (auto-generated)
+- `src/lib/api/client.ts` - Thin wrapper for configuration only (no API knowledge)
 - `src/lib/api/types.ts` - Re-exports of generated types for easier importing
-- `scripts/generate-api.js` - Node.js script to fetch OpenAPI spec and generate code
+- `scripts/generate-api.js` - Generic OpenAPI code generator (API-agnostic)
 - `scripts/generate-api.sh` - Shell script wrapper for easier execution
 - `.gitignore` updates - Exclude generated code directory
 - `package.json` scripts - Add code generation and update commands
 
 ### Files to Modify
-- `package.json` - Add openapi-typescript, openapi-fetch, and related dependencies
+- `package.json` - Add openapi-typescript, openapi-fetch, and TanStack Query code generation dependencies
 - `src/types/app.ts` - Replace manual DHCPLease interface with generated types
 - `vite.config.ts` - Add path alias for generated API types
 - `tsconfig.json` - Include generated types directory in compilation
 - Future components using API - Update to use generated client and types
 
 ### Key Functions to Implement
-- `generateApiCode()` - Main function in generate-api.js to orchestrate code generation
-- `fetchOpenApiSpec()` - Fetch OpenAPI specification from backend at http://localhost:5000/api/v1/openapi.json
-- `generateTypes()` - Generate TypeScript types from OpenAPI spec (validated working with backend)
-- `generateClient()` - Generate fetch-based API client with type safety
-- `createApiClient()` - Factory function for configured API client instances  
-- `validateApiResponse()` - Runtime validation using generated schemas
+- `generateApiCode()` - Generic orchestration function (no API knowledge, purely OpenAPI-driven)
+- `fetchOpenApiSpec()` - Generic OpenAPI spec fetcher (configurable URL, no hardcoded endpoints)
+- `generateTypes()` - Generate TypeScript types purely from OpenAPI components schema
+- `generateClient()` - Generate fetch-based API client purely from OpenAPI paths
+- `generateQueryHooks()` - Generate TanStack Query hooks purely from OpenAPI operations
+- `createApiClient()` - Generic factory function for configured API client instances
 
 ### Verified API Structure (from running backend)
 The backend provides a complete OpenAPI 3.0.2 specification with:
@@ -36,6 +39,18 @@ The backend provides a complete OpenAPI 3.0.2 specification with:
 - **5 schemas**: `DhcpLease`, `Error`, `LeaseUpdateEvent`, `SseConnectionEstablished`, `SseHeartbeat`
 - **Working server**: Confirmed accessible at http://localhost:5000/api/v1/
 - **Complete documentation**: Full descriptions, examples, and proper schema references
+
+## Critical Design Principle
+
+**COMPLETE API AGNOSTICISM**: The code generator must have ZERO knowledge of the specific API being consumed. All code generation must be driven purely by parsing the OpenAPI JSON specification. The generator should work with ANY valid OpenAPI 3.0 specification, not just the DHCP API.
+
+### Enforced Constraints:
+- NO hardcoded endpoint paths (e.g., `/leases`, `/health`)
+- NO hardcoded schema names (e.g., `DhcpLease`, `Error`)  
+- NO hardcoded HTTP methods or response structures
+- NO business logic or domain-specific knowledge
+- ALL generated code must be derived from OpenAPI spec parsing
+- Generator must work with different APIs by simply changing the OpenAPI JSON URL
 
 ## Algorithm Explanation
 
@@ -48,31 +63,38 @@ The backend provides a complete OpenAPI 3.0.2 specification with:
    - Handles connection errors gracefully with informative messages
 
 2. **TypeScript Type Generation**:
-   - Use `openapi-typescript` to generate TypeScript interfaces from OpenAPI components
-   - Generate complete type definitions for all schemas: DhcpLease, Error, SSE events
-   - Create union types for API responses and request payloads
-   - Generate path parameter types and query parameter interfaces
-   - Output types to `src/lib/api/generated/types.ts`
+   - Use `openapi-typescript` to generate TypeScript interfaces purely from OpenAPI components schema
+   - Generate complete type definitions for all schemas found in the spec (no hardcoded schema names)
+   - Create union types for API responses and request payloads based on OpenAPI definitions
+   - Generate path parameter types and query parameter interfaces from OpenAPI paths
+   - Output types to `src/lib/api/generated/types.ts` (purely generated, no manual additions)
 
 3. **API Client Generation**:
-   - Use `openapi-fetch` to generate type-safe fetch-based client
-   - Generate methods for each endpoint: GET /leases, GET /health, GET /status, POST /internal/notify-lease-change
-   - Include proper TypeScript generics for request/response typing
-   - Generate SSE client types for `/leases/stream` endpoint
-   - Output client to `src/lib/api/generated/client.ts`
+   - Use `openapi-fetch` to generate type-safe fetch-based client purely from OpenAPI paths
+   - Generate methods for each endpoint discovered in the OpenAPI spec (no hardcoded endpoints)
+   - Include proper TypeScript generics for request/response typing based on OpenAPI operation definitions
+   - Generate SSE client types for any `text/event-stream` endpoints found in spec
+   - Output client to `src/lib/api/generated/client.ts` (purely generated, no manual additions)
 
-4. **Integration Layer**:
-   - Create wrapper client in `src/lib/api/client.ts` with:
+4. **TanStack Query Hook Generation**:
+   - Generate custom hooks for each GET endpoint using TanStack Query
+   - Generate mutation hooks for POST/PUT/PATCH/DELETE endpoints using TanStack Query
+   - Include proper TypeScript typing for query keys, variables, and responses
+   - Generate SSE hooks for real-time data using TanStack Query with custom logic
+   - Output hooks to `src/lib/api/generated/queries.ts` (purely generated, no manual additions)
+
+5. **Integration Layer** (Minimal, Configuration Only):
+   - Create thin wrapper client in `src/lib/api/client.ts` with ONLY:
      - Base URL configuration from environment variables
-     - Error handling and response transformation
+     - Generic error handling and response transformation
      - Authentication headers (if needed in future)
      - Request/response interceptors for logging
-     - Type-safe methods that wrap generated client
+     - NO hardcoded API knowledge, purely configuration
 
-5. **Type Re-exports**:
+6. **Type Re-exports** (Generated Types Only):
    - Create `src/lib/api/types.ts` for clean imports throughout application
-   - Re-export key types: DHCPLease, APIError, SSEEvent types
-   - Export utility types for common patterns (API responses, paginated data)
+   - Re-export generated types discovered from OpenAPI spec (no hardcoded type names)
+   - Export utility types for common patterns based on generated API responses
 
 ### Development Workflow Integration
 
@@ -95,22 +117,22 @@ The backend provides a complete OpenAPI 3.0.2 specification with:
 ## Implementation Phases
 
 ### Phase 1: Core Infrastructure Setup
-- Add openapi-typescript, openapi-fetch, and supporting dependencies to package.json
+- Add openapi-typescript, openapi-fetch, TanStack Query codegen, and supporting dependencies to package.json
 - Create generation script infrastructure with proper error handling
 - Set up generated code directory structure with .gitignore rules
 - Implement basic OpenAPI spec fetching with retry logic and validation
 
 ### Phase 2: Type Generation Implementation
-- Implement TypeScript interface generation using openapi-typescript
-- Generate complete type definitions for all backend schemas
-- Create utility types for common API patterns (responses, errors, SSE events)
+- Implement generic TypeScript interface generation using openapi-typescript
+- Generate complete type definitions purely from OpenAPI components (no hardcoded schemas)
+- Create utility types dynamically based on discovered API patterns in the spec
 - Set up proper module declarations and path aliases in TypeScript config
 
-### Phase 3: API Client Generation
-- Implement type-safe API client generation using openapi-fetch
-- Create wrapper client with configuration, error handling, and interceptors
-- Generate methods for all REST endpoints with proper typing
-- Implement SSE client types and utilities for real-time connections
+### Phase 3: API Client and TanStack Query Generation
+- Implement generic type-safe API client generation using openapi-fetch (no hardcoded endpoints)
+- Generate TanStack Query hooks for all endpoints discovered in OpenAPI spec
+- Create thin configuration wrapper client with NO API knowledge
+- Generate SSE client types and TanStack Query integration for event-stream endpoints found in spec
 
 ### Phase 4: Integration and Replacement
 - Replace manual DHCPLease interface in src/types/app.ts with generated types
