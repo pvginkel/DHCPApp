@@ -4,6 +4,8 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any
 
+from app.services.sse_service import SseService
+
 
 class BaseService(ABC):
     """Base service class following OOP principles."""

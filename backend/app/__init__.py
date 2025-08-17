@@ -5,6 +5,8 @@ from typing import Optional
 from flask import Flask
 from flask_cors import CORS
 from config import get_config
+from app.services.dhcp_service import DhcpService
+from app.services.sse_service import SseService
 
 
 def create_app(config_name: Optional[str] = None) -> Flask:
@@ -30,6 +32,17 @@ def create_app(config_name: Optional[str] = None) -> Flask:
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
+    
+    # Initialize services
+    dhcp_service = DhcpService(
+        app.config['DHCP_LEASE_FILE_PATH'],
+        app.config['DHCP_CONFIG_FOLDER_PATH']
+    )
+    sse_service = SseService(dhcp_service)
+    
+    # Store services in app context for access across modules
+    app.sse_service = sse_service
+    app.dhcp_service = dhcp_service
     
     # Register blueprints
     from app.api.v1 import api_v1_bp
