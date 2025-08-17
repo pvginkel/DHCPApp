@@ -14,6 +14,7 @@ export default defineConfig({
       '@/types': resolve(__dirname, './src/types'),
       '@/hooks': resolve(__dirname, './src/hooks'),
       '@/routes': resolve(__dirname, './src/routes'),
+      '@/api': resolve(__dirname, './src/lib/api'),
     },
   },
   server: {

@@ -37,6 +37,9 @@
       ],
       "@/routes/*": [
         "./src/routes/*"
+      ],
+      "@/api/*": [
+        "./src/lib/api/*"
       ]
     },
     /* Linting */

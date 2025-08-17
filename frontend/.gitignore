@@ -26,3 +26,8 @@ dist-ssr
 
 # Generated files
 src/routeTree.gen.ts
+src/lib/api/generated/
+
+# Environment files
+.env.local
+.env.*.local

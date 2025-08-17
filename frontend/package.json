@@ -5,10 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "pnpm generate:api && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit --project tsconfig.app.json",
+    "generate:api": "node scripts/generate-api.js",
+    "generate:api:prod": "node scripts/generate-api.js --prod",
+    "update:api": "pnpm generate:api && pnpm dev",
+    "prebuild": "pnpm generate:api",
+    "validate:api": "pnpm generate:api && pnpm type-check"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
@@ -43,6 +48,9 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.3.0",
+    "openapi-fetch": "^0.14.0",
+    "openapi-typescript": "^7.4.9",
+    "openapi-typescript-codegen": "^0.29.0",
     "tailwindcss": "^3.4.17",
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.39.1",

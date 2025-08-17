@@ -4,3 +4,4 @@
 - Don't start the app yourself.
 - Keep .gitignore files as brief as possible.
 - Don't add code that may be useful in the future like helper methods or scaffolding. Only write code that is of use for the feature being implemented.
+- This project uses the BFF pattern. Backend types can be used as is in the frontend.

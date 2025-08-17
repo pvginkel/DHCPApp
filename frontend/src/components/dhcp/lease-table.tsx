@@ -1,9 +1,11 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { LoadingSpinner } from "@/components/common/loading-spinner"
-import type { DHCPLease, TableProps } from "@/types/app"
+import type { TableProps } from "@/types/app"
+import type { DhcpLease } from "@/lib/api/utils"
+import { getDhcpLeaseKey, getDhcpLeaseStatus } from "@/lib/api/utils"
 
-interface LeaseTableProps extends Omit<TableProps<DHCPLease>, 'columns'> {
-  data: DHCPLease[]
+interface LeaseTableProps extends Omit<TableProps<DhcpLease>, 'columns'> {
+  data: DhcpLease[]
 }
 
 export function LeaseTable({ data, sortConfig, onSort, isLoading, emptyMessage = "No leases found" }: LeaseTableProps) {
@@ -30,10 +32,10 @@ export function LeaseTable({ data, sortConfig, onSort, isLoading, emptyMessage =
           <TableRow>
             <TableHead 
               className="cursor-pointer hover:bg-muted/50"
-              onClick={() => onSort('ipAddress')}
+              onClick={() => onSort('ip_address')}
             >
               IP Address
-              {sortConfig.key === 'ipAddress' && (
+              {sortConfig.key === 'ip_address' && (
                 <span className="ml-1">
                   {sortConfig.direction === 'asc' ? '↑' : '↓'}
                 </span>
@@ -41,10 +43,10 @@ export function LeaseTable({ data, sortConfig, onSort, isLoading, emptyMessage =
             </TableHead>
             <TableHead 
               className="cursor-pointer hover:bg-muted/50"
-              onClick={() => onSort('macAddress')}
+              onClick={() => onSort('mac_address')}
             >
               MAC Address
-              {sortConfig.key === 'macAddress' && (
+              {sortConfig.key === 'mac_address' && (
                 <span className="ml-1">
                   {sortConfig.direction === 'asc' ? '↑' : '↓'}
                 </span>
@@ -63,10 +65,10 @@ export function LeaseTable({ data, sortConfig, onSort, isLoading, emptyMessage =
             </TableHead>
             <TableHead 
               className="cursor-pointer hover:bg-muted/50"
-              onClick={() => onSort('leaseEnd')}
+              onClick={() => onSort('lease_time')}
             >
               Lease Expiration
-              {sortConfig.key === 'leaseEnd' && (
+              {sortConfig.key === 'lease_time' && (
                 <span className="ml-1">
                   {sortConfig.direction === 'asc' ? '↑' : '↓'}
                 </span>
@@ -76,26 +78,29 @@ export function LeaseTable({ data, sortConfig, onSort, isLoading, emptyMessage =
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.map((lease) => (
-            <TableRow 
-              key={lease.id}
-              className={lease.isNew ? "animate-flash-update" : ""}
-            >
-              <TableCell className="font-mono">{lease.ipAddress}</TableCell>
-              <TableCell className="font-mono">{lease.macAddress}</TableCell>
-              <TableCell>{lease.hostname || 'Unknown'}</TableCell>
-              <TableCell>{new Date(lease.leaseEnd).toLocaleString()}</TableCell>
-              <TableCell>
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                  lease.status === 'active' 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-red-100 text-red-800'
-                }`}>
-                  {lease.status}
-                </span>
-              </TableCell>
-            </TableRow>
-          ))}
+          {data.map((lease) => {
+            const status = getDhcpLeaseStatus(lease)
+            return (
+              <TableRow 
+                key={getDhcpLeaseKey(lease)}
+                className="hover:bg-muted/50"
+              >
+                <TableCell className="font-mono">{lease.ip_address}</TableCell>
+                <TableCell className="font-mono">{lease.mac_address}</TableCell>
+                <TableCell>{lease.hostname || 'Unknown'}</TableCell>
+                <TableCell>{new Date(lease.lease_time).toLocaleString()}</TableCell>
+                <TableCell>
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                    status === 'active' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {status}
+                  </span>
+                </TableCell>
+              </TableRow>
+            )
+          })}
         </TableBody>
       </Table>
     </div>

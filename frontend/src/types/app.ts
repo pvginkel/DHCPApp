@@ -28,19 +28,6 @@ export interface TableProps<T = any> {
   emptyMessage?: string
 }
 
-// DHCP Lease types (placeholder for future API integration)
-export interface DHCPLease {
-  id: string
-  ipAddress: string
-  macAddress: string
-  hostname: string
-  leaseStart: string
-  leaseEnd: string
-  deviceType?: string
-  status: 'active' | 'expired'
-  isNew?: boolean // For flash animation
-}
-
 // Component props
 export interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg'
