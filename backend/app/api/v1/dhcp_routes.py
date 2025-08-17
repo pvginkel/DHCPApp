@@ -20,12 +20,14 @@ def get_dhcp_leases():
     logger.info("DHCP leases endpoint accessed")
     
     try:
-        # Get DHCP lease file path from configuration
+        # Get DHCP lease file path and config folder path from configuration
         lease_file_path = current_app.config['DHCP_LEASE_FILE_PATH']
+        config_folder_path = current_app.config['DHCP_CONFIG_FOLDER_PATH']
         logger.debug(f"Using DHCP lease file path: {lease_file_path}")
+        logger.debug(f"Using DHCP config folder path: {config_folder_path}")
         
         # Initialize DHCP service
-        dhcp_service = DhcpService(lease_file_path)
+        dhcp_service = DhcpService(lease_file_path, config_folder_path)
         
         # Get all leases
         leases = dhcp_service.get_all_leases()
