@@ -47,6 +47,10 @@ class OpenApiGenerator:
             plugins=[MarshmallowPlugin()]
         )
         
+        # Track whether schemas and endpoints have been registered to prevent duplicates
+        self._schemas_registered = False
+        self._endpoints_registered = False
+        
         logger.info("Initialized OpenAPI generator with APISpec")
     
     def generate_spec(self) -> Dict[str, Any]:
@@ -57,11 +61,15 @@ class OpenApiGenerator:
         """
         logger.debug("Generating OpenAPI specification")
         
-        # Register schemas
-        self._register_schemas()
+        # Register schemas only once
+        if not self._schemas_registered:
+            self._register_schemas()
+            self._schemas_registered = True
         
-        # Register endpoints
-        self._register_endpoints()
+        # Register endpoints only once
+        if not self._endpoints_registered:
+            self._register_endpoints()
+            self._endpoints_registered = True
         
         # Return complete specification
         spec_dict = self.spec.to_dict()
