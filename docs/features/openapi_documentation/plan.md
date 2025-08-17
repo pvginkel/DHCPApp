@@ -2,117 +2,77 @@
 
 ## Brief Description
 
-Implement automatic OpenAPI 3.0 specification generation for the DHCP monitoring Flask API to enable type-safe frontend development. The feature will generate comprehensive API documentation with schema definitions that can be consumed by SPA applications to automatically generate TypeScript type definitions, ensuring type safety and reducing integration errors.
+Implement automatic OpenAPI 3.0 specification generation for the DHCP monitoring Flask API using Marshmallow schemas and APISpec library. The feature will generate comprehensive API documentation that can be consumed by SPA applications to automatically generate TypeScript type definitions, ensuring type safety and reducing integration errors.
 
 ## Relevant Files and Functions
 
 ### Files to Create
-- `app/api/openapi.py` - OpenAPI specification generator service
-- `app/api/v1/openapi_routes.py` - Routes for serving OpenAPI documentation
-- `app/schemas/` - Directory for schema definitions
+- `app/api/openapi.py` - OpenAPI specification generator service using APISpec
+- `app/api/v1/openapi_routes.py` - Routes for serving OpenAPI JSON and Swagger UI
 - `app/schemas/__init__.py` - Schema module initialization
-- `app/schemas/dhcp_lease_schema.py` - DHCP lease response schemas
-- `app/schemas/error_schema.py` - Error response schemas
-- `app/schemas/sse_schema.py` - SSE event schemas
-- `app/schemas/base_schema.py` - Base schema definitions
+- `app/schemas/dhcp_lease_schema.py` - Marshmallow schema for DHCP lease objects
+- `app/schemas/error_schema.py` - Marshmallow schema for error responses
+- `app/schemas/sse_schema.py` - Marshmallow schemas for SSE event types
+- `app/schemas/base_schema.py` - Base Marshmallow schema definitions
 
 ### Files to Modify
 - `requirements.txt` - Add apispec and marshmallow dependencies
 - `app/api/v1/__init__.py` - Import new OpenAPI routes
-- `app/__init__.py` - Register OpenAPI blueprint and configure spec generation
-- `app/models/dhcp_lease.py` - Add schema generation methods
-- `app/models/lease_update_event.py` - Add schema generation methods
-- `app/utils/__init__.py` - Enhance ResponseHelper with schema-aware methods
+- `app/__init__.py` - Register OpenAPI generator and configure spec generation
 
 ### Key Functions to Implement
-- `OpenApiGenerator.generate_spec()` - Core specification generation
-- `OpenApiGenerator.register_schemas()` - Register all data schemas
-- `OpenApiGenerator.register_endpoints()` - Register API endpoints with documentation
-- `DhcpLeaseSchema.get_schema()` - Generate lease object schema
-- `ErrorResponseSchema.get_schema()` - Generate error response schema
-- `SseEventSchema.get_schema()` - Generate SSE event schema
-
-### Key Functions to Modify
-- `api_v1_bp` blueprint registration - Add OpenAPI endpoint documentation
-- `DhcpLease.to_dict()` - Ensure consistent schema mapping
-- `LeaseUpdateEvent.to_dict()` - Ensure consistent schema mapping
-- `ResponseHelper.success_response()` - Add schema validation capabilities
-- `ResponseHelper.error_response()` - Add schema validation capabilities
+- `OpenApiGenerator.generate_spec()` - Generate complete OpenAPI specification using APISpec
+- `OpenApiGenerator.register_schemas()` - Register Marshmallow schemas with APISpec
+- `OpenApiGenerator._register_endpoints()` - Register API endpoints with documentation
+- `get_openapi_spec()` - Route handler to serve OpenAPI JSON specification
+- `get_swagger_ui()` - Route handler to serve Swagger UI interface
 
 ## Algorithm Explanation
 
 ### OpenAPI Specification Generation Algorithm
 
-1. **Schema Definition Phase**:
-   - Create Marshmallow schemas for all data models (DhcpLease, LeaseUpdateEvent, Error responses)
-   - Define base schemas for common response patterns (success, error)
-   - Map Python types to OpenAPI schema types with validation rules
+1. **Schema Definition**:
+   - Create lightweight Marshmallow schemas for data models (DhcpLease, LeaseUpdateEvent, Error responses)
+   - Define field types, descriptions, and examples in Marshmallow field definitions
+   - Use APISpec's automatic OpenAPI schema generation from Marshmallow schemas
 
-2. **Endpoint Discovery Phase**:
-   - Iterate through registered Flask blueprints and routes
-   - Extract HTTP methods, paths, and route functions
-   - Parse docstrings for endpoint descriptions and parameter information
-   - Map route parameters to OpenAPI path/query parameters
+2. **Specification Generation**:
+   - Initialize APISpec with OpenAPI 3.0 configuration and MarshmallowPlugin
+   - Register Marshmallow schemas using `spec.components.schema()`
+   - Define endpoint documentation with schema references using `spec.path()`
+   - APISpec automatically converts Marshmallow schemas to OpenAPI format
 
-3. **Documentation Generation Phase**:
-   - Use apispec library to generate OpenAPI 3.0 specification
-   - Register schemas with specification generator
-   - Register endpoints with request/response schema references
-   - Generate complete specification JSON/YAML
+3. **Endpoint Documentation**:
+   - Manually define each API endpoint with HTTP methods, descriptions, and responses
+   - Reference registered schemas using `{"$ref": "#/components/schemas/SchemaName"}`
+   - Include response status codes, content types, and error scenarios
+   - Add comprehensive descriptions and examples for each endpoint
 
-4. **Runtime Serving Phase**:
-   - Serve OpenAPI specification at `/api/v1/openapi.json` endpoint
-   - Optionally serve Swagger UI at `/api/v1/docs` for interactive documentation
-   - Cache generated specification for performance
-
-### Schema Mapping Algorithm
-
-1. **Model Analysis**:
-   - Analyze existing `to_dict()` methods in models
-   - Extract field types, nullability, and validation rules
-   - Map datetime fields to ISO 8601 string format
-   - Map boolean fields with explicit true/false values
-
-2. **Schema Generation**:
-   - Create Marshmallow schema classes with field definitions
-   - Add validation rules (required fields, format constraints)
-   - Include field descriptions from model docstrings
-   - Generate example values for documentation
-
-3. **Response Schema Integration**:
-   - Wrap data schemas in response containers
-   - Define success response format (direct data return)
-   - Define error response format (error message + optional details)
-   - Handle array responses for list endpoints
+4. **Runtime Serving**:
+   - Serve complete OpenAPI specification at `/api/v1/openapi.json`
+   - Serve interactive Swagger UI at `/api/v1/docs`
+   - Generate specification on-demand using `spec.to_dict()`
 
 ## Implementation Phases
 
-### Phase 1: Core Infrastructure (Foundation)
-- Install and configure apispec and marshmallow dependencies
-- Create base schema infrastructure and OpenAPI generator service
-- Implement basic specification generation without endpoint documentation
-- Create simple test endpoint to serve OpenAPI JSON specification
+### Phase 1: Core Infrastructure
+- Add apispec and marshmallow dependencies to requirements.txt
+- Create OpenApiGenerator service with APISpec initialization
+- Implement basic OpenAPI 3.0 specification structure with project metadata
+- Register generator with Flask application factory
 
-### Phase 2: Data Schema Implementation (Models)
-- Implement Marshmallow schemas for all existing data models
-- Add schema generation methods to DhcpLease and LeaseUpdateEvent models
-- Create comprehensive response schemas for success and error cases
-- Validate schema generation against existing API responses
+### Phase 2: Schema Implementation
+- Create lightweight Marshmallow schemas for DHCP lease, error responses, and SSE events
+- Register schemas with APISpec using MarshmallowPlugin for automatic conversion
+- Ensure schema field definitions include descriptions and examples for documentation
 
-### Phase 3: Endpoint Documentation (API Integration)
-- Add OpenAPI documentation to all existing API endpoints
-- Implement automatic endpoint discovery and documentation generation
-- Add request/response schema mapping for each endpoint
-- Include proper HTTP status codes and error response documentation
+### Phase 3: Endpoint Documentation
+- Implement manual endpoint registration in OpenApiGenerator._register_endpoints()
+- Document all existing API endpoints: /health, /status, /leases, /leases/stream, /internal/notify-lease-change
+- Add comprehensive response documentation with proper HTTP status codes and schema references
+- Include detailed endpoint descriptions and SSE event format examples
 
-### Phase 4: Documentation Serving (User Interface)
-- Create dedicated routes for serving OpenAPI specification
-- Optionally implement Swagger UI integration for interactive documentation
-- Add endpoint for downloading specification in JSON/YAML formats
-- Implement caching for performance optimization
-
-### Phase 5: Validation and Testing (Quality Assurance)
-- Validate generated OpenAPI specification against OpenAPI 3.0 standard
-- Test type generation workflow with sample frontend TypeScript generation
-- Ensure all existing endpoints are properly documented
-- Add automated tests for specification generation accuracy
+### Phase 4: Documentation Serving
+- Create OpenAPI routes for serving JSON specification at /api/v1/openapi.json
+- Implement Swagger UI serving at /api/v1/docs with embedded HTML template
+- Add proper error handling and logging for documentation endpoints
