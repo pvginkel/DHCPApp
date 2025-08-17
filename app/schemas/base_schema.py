@@ -24,21 +24,17 @@ class PaginationSchema(BaseSchema):
     
     page = fields.Integer(
         required=True,
-        description="Current page number",
-        example=1
+        metadata={"description": "Current page number", "example": 1}
     )
     per_page = fields.Integer(
         required=True,
-        description="Items per page",
-        example=20
+        metadata={"description": "Items per page", "example": 20}
     )
     total = fields.Integer(
         required=True,
-        description="Total number of items",
-        example=150
+        metadata={"description": "Total number of items", "example": 150}
     )
     pages = fields.Integer(
         required=True,
-        description="Total number of pages",
-        example=8
+        metadata={"description": "Total number of pages", "example": 8}
     )

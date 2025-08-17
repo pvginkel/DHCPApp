@@ -9,12 +9,10 @@ class ErrorSchema(BaseSchema):
     
     error = fields.String(
         required=True,
-        description="Error message describing what went wrong",
-        example="Unable to read DHCP lease file"
+        metadata={"description": "Error message describing what went wrong", "example": "Unable to read DHCP lease file"}
     )
     
     details = fields.String(
         allow_none=True,
-        description="Additional error details or technical information",
-        example="FileNotFoundError: /var/lib/dhcp/dhcpd.leases not found"
+        metadata={"description": "Additional error details or technical information", "example": "FileNotFoundError: /var/lib/dhcp/dhcpd.leases not found"}
     )
