@@ -7,6 +7,7 @@ from flask_cors import CORS
 from config import get_config
 from app.services.dhcp_service import DhcpService
 from app.services.sse_service import SseService
+from app.api.openapi import OpenApiGenerator
 
 
 def create_app(config_name: Optional[str] = None) -> Flask:
@@ -39,10 +40,12 @@ def create_app(config_name: Optional[str] = None) -> Flask:
         app.config['DHCP_CONFIG_FOLDER_PATH']
     )
     sse_service = SseService(dhcp_service)
+    openapi_generator = OpenApiGenerator()
     
     # Store services in app context for access across modules
     app.sse_service = sse_service
     app.dhcp_service = dhcp_service
+    app.openapi_generator = openapi_generator
     
     # Register blueprints
     from app.api.v1 import api_v1_bp
