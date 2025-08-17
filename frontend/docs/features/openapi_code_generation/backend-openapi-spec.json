@@ -1,0 +1,374 @@
+{
+  "components": {
+    "schemas": {
+      "DhcpLease": {
+        "properties": {
+          "client_id": {
+            "description": "Optional client identifier, null if not available",
+            "example": "01:aa:bb:cc:dd:ee:ff",
+            "nullable": true,
+            "type": "string"
+          },
+          "hostname": {
+            "description": "Hostname of the client device, null if unknown",
+            "example": "laptop-001",
+            "nullable": true,
+            "type": "string"
+          },
+          "ip_address": {
+            "description": "IPv4 address assigned to the client",
+            "example": "192.168.1.100",
+            "type": "string"
+          },
+          "is_active": {
+            "description": "Whether the lease is currently active (not expired)",
+            "example": true,
+            "type": "boolean"
+          },
+          "is_static": {
+            "description": "Whether this is a static DHCP assignment from configuration",
+            "example": false,
+            "type": "boolean"
+          },
+          "lease_time": {
+            "description": "Lease expiration time in ISO 8601 format with Z timezone",
+            "example": "2024-01-15T14:30:00Z",
+            "type": "string"
+          },
+          "mac_address": {
+            "description": "MAC address of the client device",
+            "example": "aa:bb:cc:dd:ee:ff",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ip_address",
+          "is_active",
+          "is_static",
+          "lease_time",
+          "mac_address"
+        ],
+        "type": "object"
+      },
+      "Error": {
+        "properties": {
+          "details": {
+            "description": "Additional error details or technical information",
+            "example": "FileNotFoundError: /var/lib/dhcp/dhcpd.leases not found",
+            "nullable": true,
+            "type": "string"
+          },
+          "error": {
+            "description": "Error message describing what went wrong",
+            "example": "Unable to read DHCP lease file",
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "type": "object"
+      },
+      "LeaseUpdateEvent": {
+        "properties": {
+          "event_type": {
+            "description": "Type of lease event",
+            "enum": [
+              "lease_added",
+              "lease_updated",
+              "lease_removed",
+              "lease_expired"
+            ],
+            "example": "lease_added",
+            "type": "string"
+          },
+          "lease": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DhcpLease"
+              }
+            ],
+            "description": "The DHCP lease object associated with this event"
+          },
+          "timestamp": {
+            "description": "When the event occurred in ISO 8601 format with Z timezone",
+            "example": "2024-01-15T14:30:00Z",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_type",
+          "lease",
+          "timestamp"
+        ],
+        "type": "object"
+      },
+      "SseConnectionEstablished": {
+        "properties": {
+          "active_connections": {
+            "description": "Number of currently active SSE connections",
+            "example": 1,
+            "type": "integer"
+          },
+          "client_id": {
+            "description": "Unique identifier for this SSE client connection",
+            "example": "client_abc123def456",
+            "type": "string"
+          },
+          "message": {
+            "description": "Connection confirmation message",
+            "example": "Successfully connected to lease updates stream",
+            "type": "string"
+          }
+        },
+        "required": [
+          "active_connections",
+          "client_id",
+          "message"
+        ],
+        "type": "object"
+      },
+      "SseHeartbeat": {
+        "properties": {
+          "active_connections": {
+            "description": "Number of currently active SSE connections",
+            "example": 2,
+            "type": "integer"
+          },
+          "timestamp": {
+            "description": "Unix timestamp when heartbeat was sent",
+            "example": 1705324200.123,
+            "type": "number"
+          }
+        },
+        "required": [
+          "active_connections",
+          "timestamp"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "contact": {
+      "name": "DHCP Monitoring Application"
+    },
+    "description": "Real-time network management API for homelab environments providing comprehensive visibility into DHCP lease information from dnsmasq services with real-time updates via Server-Sent Events.",
+    "license": {
+      "name": "MIT"
+    },
+    "title": "DHCP Network Management API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.0.2",
+  "paths": {
+    "/health": {
+      "get": {
+        "description": "Check if the DHCP monitoring service is running and healthy",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "service": {
+                      "example": "DHCP Backend API",
+                      "type": "string"
+                    },
+                    "status": {
+                      "example": "healthy",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Service is healthy"
+          }
+        },
+        "summary": "Health check endpoint",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/internal/notify-lease-change": {
+      "post": {
+        "description": "Internal endpoint called by companion containers to notify the API of DHCP lease file changes. Triggers re-reading of lease files and broadcasts changes to SSE clients.",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "active_connections": {
+                      "example": 2,
+                      "type": "integer"
+                    },
+                    "message": {
+                      "example": "Lease change notification processed successfully",
+                      "type": "string"
+                    },
+                    "status": {
+                      "example": "success",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Notification processed successfully"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "message": {
+                      "example": "Failed to process lease change notification: error details",
+                      "type": "string"
+                    },
+                    "status": {
+                      "example": "error",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Error processing notification"
+          }
+        },
+        "summary": "Internal lease change notification",
+        "tags": [
+          "Internal"
+        ]
+      }
+    },
+    "/leases": {
+      "get": {
+        "description": "Retrieve all DHCP lease information from dnsmasq lease files. Returns both active and expired leases with static/dynamic classification.",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DhcpLease"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successfully retrieved DHCP leases"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Server error retrieving leases"
+          }
+        },
+        "summary": "Get all DHCP leases",
+        "tags": [
+          "DHCP Leases"
+        ]
+      }
+    },
+    "/leases/stream": {
+      "get": {
+        "description": "Establish a Server-Sent Events (SSE) connection to receive real-time notifications of DHCP lease changes. Events include lease additions, updates, removals, and periodic heartbeats.",
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "description": "Server-Sent Events stream with the following event types:\\n- connection_established: Initial connection confirmation\\n- lease_update: DHCP lease change notification\\n- heartbeat: Periodic keep-alive message",
+                  "examples": {
+                    "connection_established": {
+                      "value": "event: connection_established\\ndata: {\"client_id\": \"client_abc123\", \"message\": \"Successfully connected\", \"active_connections\": 1}\\n\\n"
+                    },
+                    "heartbeat": {
+                      "value": "event: heartbeat\\ndata: {\"timestamp\": 1705324200.123, \"active_connections\": 2}\\n\\n"
+                    },
+                    "lease_update": {
+                      "value": "event: lease_update\\ndata: {\"event_type\": \"lease_added\", \"lease\": {...}, \"timestamp\": \"2024-01-15T14:30:00Z\"}\\n\\n"
+                    }
+                  },
+                  "type": "string"
+                }
+              }
+            },
+            "description": "SSE stream established successfully",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-cache",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Connection": {
+                "description": "keep-alive",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Server-Sent Events stream for lease updates",
+        "tags": [
+          "Real-time Updates"
+        ]
+      }
+    },
+    "/status": {
+      "get": {
+        "description": "Get basic status information about the DHCP monitoring service",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "api_version": {
+                      "example": "v1",
+                      "type": "string"
+                    },
+                    "description": {
+                      "example": "DHCP Network Management API",
+                      "type": "string"
+                    },
+                    "version": {
+                      "example": "1.0.0",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Service status information"
+          }
+        },
+        "summary": "Service status information",
+        "tags": [
+          "System"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "API Version 1",
+      "url": "/api/v1"
+    }
+  ]
+}
