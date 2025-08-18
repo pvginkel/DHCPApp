@@ -41,15 +41,18 @@ The primary purpose is to provide an easy-to-use interface for identifying activ
 - **Real-time Communication**: Server-Sent Events (SSE) client for live updates
 - **Data Persistence**: Browser localStorage for user preferences
 - **Development Environment**: Local development setup with Vite dev server
+- **Architecture Pattern**: Backend for Frontend (BFF) pattern - backend types are used directly in frontend
+- **Deployment**: Kubernetes in production environment
 
 ### System Architecture
 - **Single Page Application**: React-based client-side rendered interface with TypeScript
 - **API Integration**: OpenAPI-generated client for type-safe Flask backend consumption
 - **Real-time Updates**: SSE connection for live lease change notifications
 - **State Management**: TanStack Query for server state and React hooks for client state
-- **Functional Design**: Functional programming approach with React components
+- **Functional Design**: Functional programming approach with React components (no OOP)
 - **Type Safety**: End-to-end type safety with TypeScript and Zod validation
 - **Responsive Design**: Tailwind CSS with Radix UI for mobile-friendly interface
+- **BFF Pattern**: Backend types used directly in frontend for seamless integration
 
 ### Core Components
 - DHCP lease data table with sortable columns (IP, MAC, hostname, lease expiration, device type)
@@ -64,3 +67,23 @@ The primary purpose is to provide an easy-to-use interface for identifying activ
 - **SSE Stream**: Maintains persistent connection for real-time lease updates
 - **Browser Storage**: Utilizes localStorage for persisting user preferences
 - **Responsive Layout**: Adapts to different screen sizes for optimal viewing
+
+## Development Guidelines
+
+### Code Standards
+- **Functional Programming**: Use functional programming style exclusively - no object-oriented programming
+- **Minimal Code**: Only write code directly needed for features being implemented - avoid scaffolding or "future-useful" code
+- **Minimal Dependencies**: Keep .gitignore files brief and focused
+- **Package Management**: Use pnpm as the package manager
+- **No Auto-Start**: Development environment should not auto-start the application
+
+### Tech Stack Overview
+- **Frontend**: React + Vite + TypeScript + TanStack Router + TanStack Query + Tailwind (+ Radix UI) + Zod + OpenAPI-generated types/client
+- **Deployment**: Kubernetes in production
+- **Development**: Functional programming approach with minimal scaffolding
+
+### Architecture Principles
+- **BFF Pattern**: Backend for Frontend pattern allows direct use of backend types
+- **Type Safety**: Leverage OpenAPI-generated types for end-to-end type safety
+- **Real-time First**: Design components to handle live data updates gracefully
+- **Production Ready**: Code should be production-ready for Kubernetes deployment
