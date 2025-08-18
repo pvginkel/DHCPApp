@@ -2,8 +2,8 @@ mkdir -p $(pwd)/tmp
 
 NAME=dhcp-app
 ARGS="
-    -e STORE_PATH=/app/store
-    -e OPENAI_API_KEY=$OPENAI_API_KEY
-    -e TWITTER_API_KEY=$TWITTER_API_KEY
-    -v $(pwd)/tmp:/app/store
+    -e DHCP_LEASE_FILE_PATH=/data/dnsmasq.leases
+    -e DHCP_CONFIG_FOLDER_PATH=/data/dnsmasq-static-generated.d
+    -v $(pwd)/data:/data
+    -p 5000:5000
 "
