@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { LoadingSpinner } from '@/components/common/loading-spinner'
+import { LeaseTable } from '@/components/dhcp/lease-table'
 
 function HomePage() {
   return (
@@ -17,18 +17,7 @@ function HomePage() {
         </div>
       </div>
       
-      {/* Placeholder for future DHCP lease table */}
-      <div className="rounded-lg border border-border bg-card p-8">
-        <div className="text-center space-y-4">
-          <LoadingSpinner size="lg" />
-          <div>
-            <h3 className="text-lg font-medium">Setting up DHCP monitoring...</h3>
-            <p className="text-sm text-muted-foreground mt-2">
-              The DHCP lease table and real-time updates will be implemented in the next phase.
-            </p>
-          </div>
-        </div>
-      </div>
+      <LeaseTable />
       
       {/* Placeholder stats cards */}
       <div className="grid gap-4 md:grid-cols-4">
