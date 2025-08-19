@@ -36,10 +36,6 @@ class DevLeaseModifier:
         Returns:
             Modified lease data with fake changes applied
         """
-        if not base_leases:
-            self.logger.info("No base leases to modify, returning empty list")
-            return []
-        
         # Work with a copy to avoid modifying original data
         modified_leases = [self._copy_lease(lease) for lease in base_leases]
         
