@@ -17,6 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Generated files are in `src/lib/api/generated/` and excluded from git
 - Always run `pnpm generate:api` before development when backend changes
 - For production builds, use `pnpm generate:api:prod`
+- **Important**: Backend only runs on IPv4 - use `curl -4` when testing endpoints manually
 
 ## Architecture Overview
 
