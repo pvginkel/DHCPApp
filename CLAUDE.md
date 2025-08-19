@@ -25,6 +25,7 @@ workon dhcp-backend
 - **Run all tests**: `pytest`
 - **Run with coverage**: `pytest --cov=app`
 - **Single test file**: `pytest test/test_dhcp_service.py`
+- **Test API endpoints**: Use `curl -4` for IPv4-only requests (e.g., `curl -4 -s http://localhost:5001/api/v1/leases`)
 
 ### Configuration
 - Main config via environment variables or config.py classes

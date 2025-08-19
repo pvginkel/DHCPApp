@@ -9,7 +9,7 @@ from typing import Dict, List, Any, Optional
 from flask import Response, current_app
 
 from app.models.dhcp_lease import DhcpLease
-from app.models.lease_update_event import LeaseUpdateEvent
+from app.models.lease_update_event import DataChangeNotification
 from app.services.dhcp_service import DhcpService
 from app.services.dev_lease_modifier import DevLeaseModifier
 
@@ -26,7 +26,6 @@ class SseService:
         self.dhcp_service = dhcp_service
         self.logger = logging.getLogger(__name__)
         self._active_connections: Dict[str, Dict[str, Any]] = {}
-        self._cached_leases: Dict[str, DhcpLease] = {}
         self._message_id_counter = 0
         self._dev_lease_modifier: Optional[DevLeaseModifier] = None
     
@@ -67,57 +66,50 @@ class SseService:
         return len(self._active_connections)
     
     def process_lease_change_notification(self) -> None:
-        """Re-read leases, detect changes, and broadcast updates."""
+        """Process lease change notification and update cache."""
         try:
             # Check if we're in development mode with fake lease changes enabled
             if self._is_dev_mode_with_fake_changes():
-                current_leases = self._get_fake_modified_leases()
+                self._apply_fake_changes_to_cache()
             else:
-                # Get current leases from DHCP service normally
-                current_leases = self.dhcp_service.get_all_leases()
+                # Reload lease cache from disk
+                self.dhcp_service.reload_lease_cache()
             
-            # Detect changes compared to cached state
-            events = self._detect_lease_changes(current_leases)
-            
-            # Broadcast events if any changes detected
-            if events:
-                self.logger.info(f"Broadcasting {len(events)} lease change events")
-                self.broadcast_lease_events(events)
-            
-            # Update cached state
-            self._cache_current_leases(current_leases)
+            # Always broadcast a simple data change notification
+            self.logger.info("Broadcasting data change notification")
+            notification = DataChangeNotification(datetime.utcnow())
+            self.broadcast_data_change_notification(notification)
             
         except Exception as e:
             self.logger.error(f"Error processing lease change notification: {e}")
     
-    def broadcast_lease_events(self, events: List[LeaseUpdateEvent]) -> None:
-        """Send lease events to all connected clients.
+    def broadcast_data_change_notification(self, notification: DataChangeNotification) -> None:
+        """Send data change notification to all connected clients.
         
         Args:
-            events: List of lease update events to broadcast
+            notification: Data change notification to broadcast
         """
         if not self._active_connections:
             self.logger.debug("No active SSE connections to broadcast to")
             return
         
-        # Format events as SSE messages and queue them for clients
-        for event in events:
-            sse_message = self._format_sse_message(event.event_type, event.to_dict())
-            
-            # Send to all connected clients
-            failed_clients = []
-            for client_id, connection_info in self._active_connections.items():
-                try:
-                    # Add message to client's queue
-                    connection_info['queue'].put(sse_message)
-                    self.logger.debug(f"Queued event {event.event_type} for client {client_id}")
-                except Exception as e:
-                    self.logger.warning(f"Failed to queue event for client {client_id}: {e}")
-                    failed_clients.append(client_id)
-            
-            # Clean up failed connections
-            for client_id in failed_clients:
-                self.remove_client(client_id)
+        # Format notification as SSE message and queue for clients
+        sse_message = self._format_sse_message(notification.event_type, notification.to_dict())
+        
+        # Send to all connected clients
+        failed_clients = []
+        for client_id, connection_info in self._active_connections.items():
+            try:
+                # Add message to client's queue
+                connection_info['queue'].put(sse_message)
+                self.logger.debug(f"Queued data change notification for client {client_id}")
+            except Exception as e:
+                self.logger.warning(f"Failed to queue notification for client {client_id}: {e}")
+                failed_clients.append(client_id)
+        
+        # Clean up failed connections
+        for client_id in failed_clients:
+            self.remove_client(client_id)
     
     def _format_sse_message(self, event_type: str, data: Dict[str, Any]) -> str:
         """Format data as SSE message.
@@ -140,88 +132,6 @@ class SseService:
         
         return sse_message
     
-    def _detect_lease_changes(self, current_leases: List[DhcpLease]) -> List[LeaseUpdateEvent]:
-        """Compare current vs cached leases to detect changes.
-        
-        Args:
-            current_leases: List of current leases from fresh file read
-            
-        Returns:
-            List of detected lease update events
-        """
-        events = []
-        current_time = datetime.now()
-        
-        # Create lookup dictionaries using IP address as key
-        current_lease_dict = {lease.ip_address: lease for lease in current_leases}
-        cached_lease_dict = self._cached_leases.copy()
-        
-        # Detect new leases (lease_added)
-        for ip_address, lease in current_lease_dict.items():
-            if ip_address not in cached_lease_dict:
-                events.append(LeaseUpdateEvent('lease_added', lease, current_time))
-        
-        # Detect removed leases (lease_removed)
-        for ip_address, lease in cached_lease_dict.items():
-            if ip_address not in current_lease_dict:
-                events.append(LeaseUpdateEvent('lease_removed', lease, current_time))
-        
-        # Detect updated and expired leases
-        for ip_address, current_lease in current_lease_dict.items():
-            if ip_address in cached_lease_dict:
-                cached_lease = cached_lease_dict[ip_address]
-                
-                # Check for lease updates (same IP but different attributes)
-                if self._lease_attributes_changed(current_lease, cached_lease):
-                    events.append(LeaseUpdateEvent('lease_updated', current_lease, current_time))
-                
-                # Check for lease expiration
-                if self._lease_became_expired(current_lease, cached_lease):
-                    events.append(LeaseUpdateEvent('lease_expired', current_lease, current_time))
-        
-        return events
-    
-    def _lease_attributes_changed(self, current: DhcpLease, cached: DhcpLease) -> bool:
-        """Check if lease attributes have changed.
-        
-        Args:
-            current: Current lease state
-            cached: Previously cached lease state
-            
-        Returns:
-            True if attributes changed, False otherwise
-        """
-        return (
-            current.mac_address != cached.mac_address or
-            current.hostname != cached.hostname or
-            current.lease_time != cached.lease_time or
-            current.client_id != cached.client_id or
-            current.is_static != cached.is_static
-        )
-    
-    def _lease_became_expired(self, current: DhcpLease, cached: DhcpLease) -> bool:
-        """Check if lease became expired since last check.
-        
-        Args:
-            current: Current lease state
-            cached: Previously cached lease state
-            
-        Returns:
-            True if lease became expired, False otherwise
-        """
-        current_is_expired = not current.is_active()
-        cached_was_active = cached.is_active()
-        
-        return current_is_expired and cached_was_active
-    
-    def _cache_current_leases(self, leases: List[DhcpLease]) -> None:
-        """Update internal lease cache.
-        
-        Args:
-            leases: List of current leases to cache
-        """
-        self._cached_leases = {lease.ip_address: lease for lease in leases}
-        self.logger.debug(f"Cached {len(leases)} leases for change detection")
     
     def generate_client_id(self) -> str:
         """Generate unique client ID for new SSE connection.
@@ -246,25 +156,20 @@ class SseService:
             # Outside of Flask app context
             return False
     
-    def _get_fake_modified_leases(self) -> List[DhcpLease]:
-        """Get fake modified leases for development mode.
-        
-        Returns:
-            List of modified leases with fake changes applied
-        """
+    def _apply_fake_changes_to_cache(self) -> None:
+        """Apply fake changes directly to the lease cache for development mode."""
         # Initialize dev lease modifier if not already done
         if self._dev_lease_modifier is None:
             dhcp_pools = self.dhcp_service.get_dns_pools()
             self._dev_lease_modifier = DevLeaseModifier(dhcp_pools)
         
-        # Get base leases from file
-        base_leases = self.dhcp_service.get_all_leases()
+        # Get current cached leases
+        current_leases = self.dhcp_service.get_all_leases()
         
         # Apply fake modifications
-        modified_leases = self._dev_lease_modifier.modify_leases(base_leases)
+        modified_leases = self._dev_lease_modifier.modify_leases(current_leases)
         
-        # Cache the modified leases in DHCP service
-        self.dhcp_service.set_modified_lease_data(modified_leases)
+        # Update the cache with modified leases
+        self.dhcp_service.update_lease_cache(modified_leases)
         
-        self.logger.info(f"Generated {len(modified_leases)} fake modified leases")
-        return modified_leases
+        self.logger.info(f"Applied fake changes to cache: {len(modified_leases)} leases")

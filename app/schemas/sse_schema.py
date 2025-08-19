@@ -2,30 +2,23 @@
 
 from marshmallow import fields
 from app.schemas.base_schema import BaseSchema
-from app.schemas.dhcp_lease_schema import DhcpLeaseSchema
 
 
-class LeaseUpdateEventSchema(BaseSchema):
-    """Schema for lease update SSE events."""
+class DataChangeNotificationSchema(BaseSchema):
+    """Schema for simple data change notification SSE events."""
     
     event_type = fields.String(
         required=True,
         metadata={
-            "description": "Type of lease event",
-            "example": "lease_added",
-            "enum": ["lease_added", "lease_updated", "lease_removed", "lease_expired"]
+            "description": "Type of notification event",
+            "example": "data_changed",
+            "enum": ["data_changed"]
         }
-    )
-    
-    lease = fields.Nested(
-        DhcpLeaseSchema,
-        required=True,
-        metadata={"description": "The DHCP lease object associated with this event"}
     )
     
     timestamp = fields.String(
         required=True,
-        metadata={"description": "When the event occurred in ISO 8601 format with Z timezone", "example": "2024-01-15T14:30:00Z"}
+        metadata={"description": "When the change occurred in ISO 8601 format with Z timezone", "example": "2024-01-15T14:30:00Z"}
     )
 
 
