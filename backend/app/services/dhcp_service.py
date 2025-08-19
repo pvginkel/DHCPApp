@@ -33,13 +33,16 @@ class DhcpService:
         # Cache for static leases
         self._static_leases_cache: Dict[str, Dict[str, str]] = {}
         
-        # Cache for modified lease data (development mode)
-        self._modified_leases_cache: Optional[List[DhcpLease]] = None
+        # Main lease cache
+        self._lease_cache: Optional[List[DhcpLease]] = None
         
         # Parse main configuration on initialization
         self._parse_main_config()
         self._discover_config_files()
         self._parse_dhcp_ranges()
+        
+        # Load initial lease cache
+        self._load_lease_cache()
     
     def _resolve_path(self, path: str) -> str:
         """Resolve path with ROOT_PATH prefix.
@@ -359,49 +362,17 @@ class DhcpService:
         
         return statistics
     
-    def get_all_leases(self, use_modified_data: bool = False) -> List[DhcpLease]:
-        """Read lease file and return list of DhcpLease objects.
-        
-        Args:
-            use_modified_data: If True, return cached modified data instead of reading file
+    def get_all_leases(self) -> List[DhcpLease]:
+        """Get all DHCP leases from cache.
         
         Returns:
-            List of parsed DHCP lease objects
-            
-        Raises:
-            FileNotFoundError: If lease file does not exist
-            PermissionError: If lease file cannot be read
-            Exception: For other file access or parsing errors
+            List of DHCP lease objects from cache
         """
-        # Return modified data if requested and available
-        if use_modified_data and self._modified_leases_cache is not None:
-            self.logger.info("Returning cached modified lease data")
-            return self._modified_leases_cache.copy()
+        if self._lease_cache is None:
+            self.logger.warning("Lease cache is empty, reloading from disk")
+            self._load_lease_cache()
         
-        if not self.lease_file_path:
-            raise FileNotFoundError("No lease file path configured")
-        
-        self.logger.info(f"Reading DHCP lease file: {self.lease_file_path}")
-        
-        # Check if static leases cache is populated, if not load it
-        if not self._static_leases_cache:
-            self._load_static_leases()
-        
-        # Check if file exists
-        resolved_lease_path = self._resolve_path(self.lease_file_path)  # type: ignore
-        lease_file = Path(resolved_lease_path)
-        if not lease_file.exists():
-            self.logger.error(f"DHCP lease file not found: {self.lease_file_path}")
-            raise FileNotFoundError(f"DHCP lease file not found: {self.lease_file_path}")
-        
-        try:
-            return self.parse_lease_file()
-        except PermissionError as e:
-            self.logger.error(f"Permission denied reading lease file: {e}")
-            raise
-        except Exception as e:
-            self.logger.error(f"Error reading lease file: {e}")
-            raise
+        return self._lease_cache.copy() if self._lease_cache else []
     
     def parse_lease_file(self) -> List[DhcpLease]:
         """Parse dnsmasq lease file format.
@@ -663,11 +634,60 @@ class DhcpService:
         
         return False
     
-    def set_modified_lease_data(self, leases: List[DhcpLease]) -> None:
-        """Set modified lease data cache for development mode.
+    def _read_leases_from_disk(self) -> List[DhcpLease]:
+        """Read leases from disk without using cache.
+        
+        Returns:
+            List of parsed DHCP lease objects
+            
+        Raises:
+            FileNotFoundError: If lease file does not exist
+            PermissionError: If lease file cannot be read
+            Exception: For other file access or parsing errors
+        """
+        if not self.lease_file_path:
+            raise FileNotFoundError("No lease file path configured")
+        
+        self.logger.debug(f"Reading DHCP lease file from disk: {self.lease_file_path}")
+        
+        # Check if static leases cache is populated, if not load it
+        if not self._static_leases_cache:
+            self._load_static_leases()
+        
+        # Check if file exists
+        resolved_lease_path = self._resolve_path(self.lease_file_path)  # type: ignore
+        lease_file = Path(resolved_lease_path)
+        if not lease_file.exists():
+            self.logger.error(f"DHCP lease file not found: {self.lease_file_path}")
+            raise FileNotFoundError(f"DHCP lease file not found: {self.lease_file_path}")
+        
+        try:
+            return self.parse_lease_file()
+        except PermissionError as e:
+            self.logger.error(f"Permission denied reading lease file: {e}")
+            raise
+        except Exception as e:
+            self.logger.error(f"Error reading lease file: {e}")
+            raise
+    
+    def _load_lease_cache(self) -> None:
+        """Load leases from disk into cache."""
+        try:
+            self._lease_cache = self._read_leases_from_disk()
+            self.logger.info(f"Loaded {len(self._lease_cache)} leases into cache")
+        except Exception as e:
+            self.logger.error(f"Failed to load lease cache: {e}")
+            self._lease_cache = []
+    
+    def reload_lease_cache(self) -> None:
+        """Reload leases from disk into cache."""
+        self._load_lease_cache()
+    
+    def update_lease_cache(self, leases: List[DhcpLease]) -> None:
+        """Update the lease cache with new data.
         
         Args:
-            leases: List of modified leases to cache
+            leases: List of leases to cache
         """
-        self._modified_leases_cache = leases.copy() if leases else None
-        self.logger.debug(f"Cached {len(leases) if leases else 0} modified leases")
+        self._lease_cache = leases.copy() if leases else []
+        self.logger.debug(f"Updated lease cache with {len(self._lease_cache)} leases")

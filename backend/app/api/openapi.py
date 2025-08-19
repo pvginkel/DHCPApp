@@ -8,7 +8,7 @@ from apispec.ext.marshmallow import MarshmallowPlugin
 from app.schemas import (
     DhcpLeaseSchema,
     ErrorSchema,
-    LeaseUpdateEventSchema,
+    DataChangeNotificationSchema,
     SseConnectionEstablishedSchema,
     SseHeartbeatSchema
 )
@@ -85,7 +85,7 @@ class OpenApiGenerator:
         self.spec.components.schema("Error", schema=ErrorSchema)
         
         # Register SSE event schemas
-        self.spec.components.schema("LeaseUpdateEvent", schema=LeaseUpdateEventSchema)
+        self.spec.components.schema("DataChangeNotification", schema=DataChangeNotificationSchema)
         self.spec.components.schema("SseConnectionEstablished", schema=SseConnectionEstablishedSchema)
         self.spec.components.schema("SseHeartbeat", schema=SseHeartbeatSchema)
         
@@ -212,8 +212,9 @@ class OpenApiGenerator:
                     "summary": "Server-Sent Events stream for lease updates",
                     "description": (
                         "Establish a Server-Sent Events (SSE) connection to receive real-time "
-                        "notifications of DHCP lease changes. Events include lease additions, "
-                        "updates, removals, and periodic heartbeats."
+                        "notifications when DHCP lease data changes. Events include simple change "
+                        "notifications and periodic heartbeats. Frontend should reload lease data "
+                        "via the REST API when change notifications are received."
                     ),
                     "responses": {
                         "200": {
@@ -225,7 +226,7 @@ class OpenApiGenerator:
                                         "description": (
                                             "Server-Sent Events stream with the following event types:\\n"
                                             "- connection_established: Initial connection confirmation\\n"
-                                            "- lease_update: DHCP lease change notification\\n"
+                                            "- data_changed: Simple notification that lease data has changed\\n"
                                             "- heartbeat: Periodic keep-alive message"
                                         ),
                                         "examples": {
@@ -235,10 +236,10 @@ class OpenApiGenerator:
                                                     "data: {\"client_id\": \"client_abc123\", \"message\": \"Successfully connected\", \"active_connections\": 1}\\n\\n"
                                                 )
                                             },
-                                            "lease_update": {
+                                            "data_changed": {
                                                 "value": (
-                                                    "event: lease_update\\n"
-                                                    "data: {\"event_type\": \"lease_added\", \"lease\": {...}, \"timestamp\": \"2024-01-15T14:30:00Z\"}\\n\\n"
+                                                    "event: data_changed\\n"
+                                                    "data: {\"event_type\": \"data_changed\", \"timestamp\": \"2024-01-15T14:30:00Z\"}\\n\\n"
                                                 )
                                             },
                                             "heartbeat": {
