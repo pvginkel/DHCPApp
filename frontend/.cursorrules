@@ -1,7 +1,0 @@
-- Tech stack: React + Vite + TypeScript + TanStack Router + TanStack Query + Tailwind (+ Radix UI) + Zod + OpenAPI-generated types/client, running on Kubernetes in production.
-- Use `pnmp` as the package manager.
-- Use a functional programming style; no OOP.
-- Don't start the app yourself.
-- Keep .gitignore files as brief as possible.
-- Don't add code that may be useful in the future like helper methods or scaffolding. Only write code that is of use for the feature being implemented.
-- This project uses the BFF pattern. Backend types can be used as is in the frontend.
