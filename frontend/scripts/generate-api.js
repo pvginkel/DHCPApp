@@ -11,10 +11,10 @@ const generatedDir = join(projectRoot, 'src', 'lib', 'api', 'generated')
 // Configuration
 const isProd = process.argv.includes('--prod')
 const baseUrl = isProd 
-  ? process.env.VITE_API_BASE_URL || 'https://your-prod-domain.com'
-  : 'http://localhost:5000'
+  ? process.env.VITE_API_BASE_URL || 'https://your-prod-domain.com/api/v1'
+  : process.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1'
 
-const openApiUrl = `${baseUrl}/api/v1/openapi.json`
+const openApiUrl = `${baseUrl}/openapi.json`
 
 /**
  * Fetches OpenAPI specification from the backend
@@ -47,7 +47,7 @@ async function fetchOpenApiSpec(url) {
 🔧 Troubleshooting:
    1. Make sure the backend is running: workon dhcp-backend && python3 run.py
    2. Verify the backend is accessible at: ${baseUrl}
-   3. Check the health endpoint: ${baseUrl}/api/v1/health
+   3. Check the health endpoint: ${baseUrl}/health
       `)
     }
     
@@ -75,20 +75,20 @@ function generateTypes(specPath, outputPath) {
 
 /**
  * Generates API client using openapi-fetch
- * @param {object} spec - The OpenAPI specification
  * @param {string} outputPath - Path for generated client
  */
-function generateClient(spec, outputPath) {
+function generateClient(outputPath) {
   console.log('🔧 Generating API client...')
   
   // Create a basic fetch client wrapper
   const clientCode = `// Generated API client - Do not edit manually
 import createClient from 'openapi-fetch'
+import { API_BASE_URL } from '../config'
 import type { paths } from './types'
 
 // Create the base client
 export const apiClient = createClient<paths>({
-  baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1',
+  baseUrl: API_BASE_URL,
 })
 
 // Export types for convenience
@@ -137,10 +137,7 @@ export const apiKeys = {
     Object.entries(methods).forEach(([method, operation]) => {
       if (!operation || typeof operation !== 'object') return
       
-      // Use operationId if available, otherwise generate from path and method
-      const operationId = operation.operationId || generateOperationId(method, path)
-      
-      const hookName = generateHookName(method, path, operationId)
+      const hookName = generateHookName(method, path)
       
       // Check if this is an SSE endpoint
       const isSSE = operation.responses?.['200']?.content?.['text/event-stream']
@@ -155,19 +152,20 @@ export const apiKeys = {
 //   // This endpoint returns text/event-stream
 // }`)
         } else {
-          // Generate regular query hook with endpoint-specific query key
+          // Generate regular query hook with endpoint-specific query key and proper typing
           const pathKey = path.replace(/[{}\/]/g, '_').replace(/^_+|_+$/g, '')
+          const responseType = `paths['${path}']['${method}']['responses']['200']['content']['application/json']`
           hooks.push(`
 export function ${hookName}(
   params?: paths['${path}']['${method}']['parameters'],
-  options?: Omit<UseQueryOptions, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<${responseType}, Error>, 'queryKey' | 'queryFn'>
 ) {
-  return useQuery({
+  return useQuery<${responseType}, Error>({
     queryKey: [...apiKeys.all, '${pathKey}', params] as const,
     queryFn: async () => {
       const { data, error } = await apiClient.GET('${path}', params)
       if (error) throw error
-      return data
+      return data as ${responseType}
     },
     ...options,
   })
@@ -232,31 +230,9 @@ export function ${hookName}(
 }
 
 /**
- * Generates an operation ID from HTTP method and path when not provided in OpenAPI spec
- * @param {string} method - HTTP method
- * @param {string} path - API path
- * @returns {string} Generated operation ID
+ * Generates a clean hook name from HTTP method and path
  */
-function generateOperationId(method, path) {
-  // Clean up path to create meaningful operation names
-  let cleanPath = path
-    .replace(/^\//, '') // Remove leading slash
-    .replace(/\/\{[^}]+\}/g, 'ById') // Replace path params with "ById"
-    .replace(/\//g, '_') // Replace remaining slashes with underscores
-    .replace(/[^a-zA-Z0-9_]/g, '') // Remove non-alphanumeric chars except underscores
-  
-  // Handle special cases
-  if (cleanPath === '') cleanPath = 'root'
-  if (cleanPath === 'health') cleanPath = 'health_check'
-  
-  // Combine method and path
-  return `${method}_${cleanPath}`
-}
-
-/**
- * Generates a clean hook name from HTTP method, path, and operation ID
- */
-function generateHookName(method, path, operationId) {
+function generateHookName(method, path) {
   // Create readable name from path
   let baseName = path
     .replace(/^\//, '') // Remove leading slash
@@ -371,7 +347,7 @@ async function generateApiCode() {
     
     // Generate API client
     const clientPath = join(generatedDir, 'client.ts')
-    generateClient(spec, clientPath)
+    generateClient(clientPath)
     
     // Generate TanStack Query hooks
     const hooksPath = join(generatedDir, 'queries.ts')

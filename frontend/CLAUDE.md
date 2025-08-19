@@ -104,9 +104,35 @@ src/
 
 ## Environment Configuration
 
-- `VITE_API_BASE_URL` - Backend API URL (defaults to http://localhost:5000)
+### API Configuration
+- `VITE_API_BASE_URL` - Backend API URL (defaults to `http://localhost:5000/api/v1`)
+- **Important**: Include the full path with `/api/v1` - don't use just the host
 - Development server runs on port 3000 with auto-open browser
 - Build output goes to `dist/` directory
+
+### VM/Remote Development Setup
+When developing in a VM or connecting to a remote backend:
+
+1. Create a `.env.local` file:
+   ```bash
+   # Replace with your actual backend host IP
+   VITE_API_BASE_URL=http://192.168.1.100:5000/api/v1
+   ```
+
+2. Regenerate API client for the new URL:
+   ```bash
+   pnpm generate:api
+   ```
+
+3. Start development:
+   ```bash
+   pnpm dev
+   ```
+
+**Common VM setup examples:**
+- VM to host: `VITE_API_BASE_URL=http://192.168.1.100:5000/api/v1`
+- Docker compose: `VITE_API_BASE_URL=http://backend:5000/api/v1`
+- Development server: `VITE_API_BASE_URL=http://dev-server.local:5000/api/v1`
 
 ## Command Templates
 

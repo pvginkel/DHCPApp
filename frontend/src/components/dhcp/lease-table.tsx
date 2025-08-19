@@ -14,13 +14,9 @@ import {
   getLeaseStatus, 
   getLeaseStatusDisplay 
 } from '@/lib/utils/lease-utils'
-import type { components } from '@/lib/api/generated/types'
-
-type DhcpLease = components['schemas']['DhcpLease']
 
 export function LeaseTable() {
-  const { data, isLoading, error } = useLeasesQuery()
-  const leases = data as DhcpLease[] | undefined
+  const { data: leases, isLoading, error } = useLeasesQuery()
 
   if (isLoading) {
     return (
