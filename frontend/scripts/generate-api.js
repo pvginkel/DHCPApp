@@ -143,15 +143,7 @@ export const apiKeys = {
       const isSSE = operation.responses?.['200']?.content?.['text/event-stream']
       
       if (method === 'get') {
-        if (isSSE) {
-          // Generate SSE hook (commented for now - requires custom SSE implementation)
-          hooks.push(`
-// SSE endpoint - requires custom implementation
-// export function ${hookName}() {
-//   // TODO: Implement SSE connection logic
-//   // This endpoint returns text/event-stream
-// }`)
-        } else {
+        if (!isSSE) {
           // Generate regular query hook with endpoint-specific query key and proper typing
           const pathKey = path.replace(/[{}\/]/g, '_').replace(/^_+|_+$/g, '')
           const responseType = `paths['${path}']['${method}']['responses']['200']['content']['application/json']`
