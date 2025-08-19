@@ -8,22 +8,335 @@ from typing import List, Optional, Dict, Tuple
 from pathlib import Path
 
 from app.models.dhcp_lease import DhcpLease
+from app.models.dhcp_pool import DhcpPool
 
 
 class DhcpService:
-    """Service for reading and parsing DHCP lease files."""
+    """Service for reading and parsing DHCP lease files and configuration."""
     
-    def __init__(self, lease_file_path: str, config_folder_path: str) -> None:
-        """Initialize with lease file path and config folder path from configuration.
+    def __init__(self, config_file_path: str) -> None:
+        """Initialize with main dnsmasq configuration file path.
         
         Args:
-            lease_file_path: Path to the DHCP lease file
-            config_folder_path: Path to the dnsmasq configuration folder
+            config_file_path: Path to the main dnsmasq configuration file
         """
-        self.lease_file_path = lease_file_path
-        self.config_folder_path = config_folder_path
+        self.config_file_path = config_file_path
         self.logger = logging.getLogger(__name__)
+        
+        # Configuration discovery results
+        self.lease_file_path: Optional[str] = None
+        self.config_directories: List[Tuple[str, str]] = []  # (directory, extension_pattern)
+        self.config_files: List[str] = []
+        self.dhcp_pools: List[DhcpPool] = []
+        
+        # Cache for static leases
         self._static_leases_cache: Dict[str, Dict[str, str]] = {}
+        
+        # Parse main configuration on initialization
+        self._parse_main_config()
+        self._discover_config_files()
+        self._parse_dhcp_ranges()
+    
+    def _parse_main_config(self) -> None:
+        """Parse the main dnsmasq configuration file to extract paths and settings.
+        
+        Extracts:
+        - dhcp-leasefile path
+        - conf-dir directives with directory paths and extensions
+        """
+        self.logger.info(f"Parsing main config file: {self.config_file_path}")
+        
+        config_file = Path(self.config_file_path)
+        if not config_file.exists():
+            self.logger.error(f"Main config file not found: {self.config_file_path}")
+            raise FileNotFoundError(f"Main config file not found: {self.config_file_path}")
+        
+        try:
+            with open(config_file, 'r', encoding='utf-8') as file:
+                for line_num, line in enumerate(file, 1):
+                    line = line.strip()
+                    
+                    # Skip empty lines and comments
+                    if not line or line.startswith('#'):
+                        continue
+                    
+                    # Parse dhcp-leasefile directive
+                    if line.startswith('dhcp-leasefile='):
+                        self.lease_file_path = line.split('=', 1)[1].strip()
+                        self.logger.info(f"Found lease file path: {self.lease_file_path}")
+                    
+                    # Parse conf-dir directives
+                    elif line.startswith('conf-dir='):
+                        conf_dir_content = line.split('=', 1)[1].strip()
+                        self._parse_conf_dir(conf_dir_content)
+                        
+        except Exception as e:
+            self.logger.error(f"Error reading main config file: {e}")
+            raise
+    
+    def _parse_conf_dir(self, conf_dir_content: str) -> None:
+        """Parse conf-dir directive content.
+        
+        Args:
+            conf_dir_content: Content after 'conf-dir=' (e.g., '/etc/dnsmasq.d/,*.conf')
+        """
+        parts = conf_dir_content.split(',')
+        if len(parts) >= 1:
+            directory = parts[0].strip()
+            extension = parts[1].strip() if len(parts) > 1 else '*'
+            
+            self.config_directories.append((directory, extension))
+            self.logger.info(f"Found config directory: {directory} with extension: {extension}")
+    
+    def _discover_config_files(self) -> None:
+        """Discover all configuration files based on conf-dir directives.
+        
+        Applies dnsmasq's default filtering rules:
+        - Exclude files ending with ~ (backup files)
+        - Exclude files starting with . (hidden files) 
+        - Exclude files both starting and ending with # (commented out)
+        """
+        self.config_files = []
+        
+        for directory, extension in self.config_directories:
+            dir_path = Path(directory)
+            
+            if not dir_path.exists():
+                self.logger.warning(f"Config directory does not exist: {directory}")
+                continue
+            
+            if not dir_path.is_dir():
+                self.logger.warning(f"Config path is not a directory: {directory}")
+                continue
+            
+            try:
+                for file_path in dir_path.iterdir():
+                    if not file_path.is_file():
+                        continue
+                    
+                    filename = file_path.name
+                    
+                    # Apply dnsmasq's default filtering rules
+                    if filename.endswith('~'):
+                        continue
+                    if filename.startswith('.'):
+                        continue
+                    if filename.startswith('#') and filename.endswith('#'):
+                        continue
+                    
+                    # Apply extension filtering
+                    if extension != '*':
+                        # Handle glob patterns like *.conf
+                        if extension.startswith('*.'):
+                            expected_ext = extension[2:]  # Remove '*.'
+                            if not filename.endswith(f'.{expected_ext}'):
+                                continue
+                        elif extension != filename:
+                            continue
+                    
+                    self.config_files.append(str(file_path))
+                    self.logger.debug(f"Discovered config file: {file_path}")
+                    
+            except Exception as e:
+                self.logger.warning(f"Error accessing config directory {directory}: {e}")
+                continue
+        
+        self.logger.info(f"Discovered {len(self.config_files)} configuration files")
+    
+    def _parse_dhcp_ranges(self) -> None:
+        """Parse all configuration files to extract DHCP pool information.
+        
+        Looks for dhcp-range directives and creates DhcpPool objects.
+        """
+        self.dhcp_pools = []
+        
+        for config_file_path in self.config_files:
+            try:
+                with open(config_file_path, 'r', encoding='utf-8') as file:
+                    for line_num, line in enumerate(file, 1):
+                        line = line.strip()
+                        
+                        # Skip empty lines and comments
+                        if not line or line.startswith('#'):
+                            continue
+                        
+                        # Look for dhcp-range directives
+                        if 'dhcp-range=' in line:
+                            pool = self._parse_dhcp_range_line(line)
+                            if pool:
+                                self.dhcp_pools.append(pool)
+                                self.logger.info(f"Found DHCP pool: {pool}")
+                                
+            except Exception as e:
+                self.logger.warning(f"Error reading config file {config_file_path}: {e}")
+                continue
+        
+        self.logger.info(f"Parsed {len(self.dhcp_pools)} DHCP pools")
+    
+    def _parse_dhcp_range_line(self, line: str) -> Optional[DhcpPool]:
+        """Parse dhcp-range configuration line to create DhcpPool object.
+        
+        Args:
+            line: Configuration line containing dhcp-range directive
+            
+        Returns:
+            DhcpPool object or None if parsing fails
+            
+        Example formats:
+        dhcp-range=set:intranet,10.1.1.10,10.1.1.199,255.255.0.0,86400
+        dhcp-range=192.168.1.50,192.168.1.150,12h
+        """
+        try:
+            # Find dhcp-range= directive
+            dhcp_range_match = re.search(r'dhcp-range=([^#\s]+)', line)
+            if not dhcp_range_match:
+                return None
+            
+            # Extract content after dhcp-range=
+            dhcp_range_content = dhcp_range_match.group(1)
+            
+            # Split by commas to get components
+            components = [comp.strip() for comp in dhcp_range_content.split(',')]
+            
+            if len(components) < 2:
+                return None
+            
+            pool_name = None
+            start_ip = None
+            end_ip = None
+            netmask = None
+            lease_duration = None
+            
+            # Parse components based on format
+            if components[0].startswith('set:'):
+                # Format: set:tag,start_ip,end_ip,netmask,duration
+                pool_name = components[0][4:]  # Remove 'set:' prefix
+                if len(components) >= 3:
+                    start_ip = components[1]
+                    end_ip = components[2]
+                if len(components) >= 4:
+                    netmask = components[3]
+                if len(components) >= 5:
+                    lease_duration = self._parse_lease_duration(components[4])
+            else:
+                # Format: start_ip,end_ip,[netmask],[duration]
+                pool_name = "default"
+                start_ip = components[0]
+                end_ip = components[1]
+                if len(components) >= 3 and self._is_netmask(components[2]):
+                    netmask = components[2]
+                    if len(components) >= 4:
+                        lease_duration = self._parse_lease_duration(components[3])
+                elif len(components) >= 3:
+                    lease_duration = self._parse_lease_duration(components[2])
+            
+            # Validate required fields
+            if not start_ip or not end_ip:
+                return None
+            
+            # Default netmask if not specified
+            if not netmask:
+                netmask = "255.255.255.0"
+            
+            return DhcpPool(
+                pool_name=pool_name,
+                start_ip=start_ip,
+                end_ip=end_ip,
+                netmask=netmask,
+                lease_duration=lease_duration
+            )
+            
+        except Exception as e:
+            self.logger.warning(f"Error parsing dhcp-range line: {line}. Error: {e}")
+            return None
+    
+    def _is_netmask(self, value: str) -> bool:
+        """Check if a value looks like a netmask.
+        
+        Args:
+            value: String to check
+            
+        Returns:
+            True if value appears to be a netmask
+        """
+        # Check for dotted decimal netmask (e.g., 255.255.255.0)
+        if re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', value):
+            parts = value.split('.')
+            return all(0 <= int(part) <= 255 for part in parts)
+        return False
+    
+    def _parse_lease_duration(self, duration_str: str) -> Optional[int]:
+        """Parse lease duration string to seconds.
+        
+        Args:
+            duration_str: Duration string (e.g., '86400', '12h', '1d')
+            
+        Returns:
+            Duration in seconds or None if parsing fails
+        """
+        try:
+            # Check for pure number (seconds)
+            if duration_str.isdigit():
+                return int(duration_str)
+            
+            # Check for time suffixes
+            if duration_str.endswith('s'):
+                return int(duration_str[:-1])
+            elif duration_str.endswith('m'):
+                return int(duration_str[:-1]) * 60
+            elif duration_str.endswith('h'):
+                return int(duration_str[:-1]) * 3600
+            elif duration_str.endswith('d'):
+                return int(duration_str[:-1]) * 86400
+            
+            return None
+            
+        except (ValueError, IndexError):
+            return None
+    
+    def get_dns_pools(self) -> List[DhcpPool]:
+        """Get all discovered DHCP pools.
+        
+        Returns:
+            List of DhcpPool objects
+        """
+        return self.dhcp_pools.copy()
+    
+    def get_pool_usage_statistics(self) -> List[Dict]:
+        """Calculate usage statistics for all pools.
+        
+        Returns:
+            List of dictionaries containing pool usage information
+        """
+        statistics = []
+        
+        # Get current leases to calculate usage
+        try:
+            current_leases = self.get_all_leases()
+        except Exception as e:
+            self.logger.error(f"Error getting leases for statistics: {e}")
+            current_leases = []
+        
+        for pool in self.dhcp_pools:
+            # Count leases within this pool's range
+            used_addresses = sum(
+                1 for lease in current_leases 
+                if lease.is_active() and pool.contains_ip(lease.ip_address)
+            )
+            
+            available_addresses = pool.total_addresses - used_addresses
+            usage_percentage = (used_addresses / pool.total_addresses * 100) if pool.total_addresses > 0 else 0
+            
+            pool_stats = pool.to_dict()
+            pool_stats.update({
+                'used_addresses': used_addresses,
+                'available_addresses': available_addresses,
+                'usage_percentage': round(usage_percentage, 2)
+            })
+            
+            statistics.append(pool_stats)
+        
+        return statistics
     
     def get_all_leases(self) -> List[DhcpLease]:
         """Read lease file and return list of DhcpLease objects.
@@ -36,6 +349,9 @@ class DhcpService:
             PermissionError: If lease file cannot be read
             Exception: For other file access or parsing errors
         """
+        if not self.lease_file_path:
+            raise FileNotFoundError("No lease file path configured")
+        
         self.logger.info(f"Reading DHCP lease file: {self.lease_file_path}")
         
         # Check if static leases cache is populated, if not load it
@@ -130,18 +446,36 @@ class DhcpService:
             # Determine if this is a static lease
             is_static = self._is_static_lease(mac_address, ip_address)
             
+            # Determine which pool this lease belongs to
+            pool_name = self._get_pool_for_ip(ip_address)
+            
             return DhcpLease(
                 ip_address=ip_address,
                 mac_address=mac_address,
                 hostname=hostname,
                 lease_time=lease_time,
                 client_id=client_id,
-                is_static=is_static
+                is_static=is_static,
+                pool_name=pool_name
             )
             
         except (ValueError, IndexError) as e:
             self.logger.warning(f"Error parsing lease line: {line}. Error: {e}")
             return None
+    
+    def _get_pool_for_ip(self, ip_address: str) -> Optional[str]:
+        """Determine which DHCP pool an IP address belongs to.
+        
+        Args:
+            ip_address: IP address to check
+            
+        Returns:
+            Pool name or None if IP doesn't belong to any known pool
+        """
+        for pool in self.dhcp_pools:
+            if pool.contains_ip(ip_address):
+                return pool.pool_name
+        return None
     
     def _validate_ip_address(self, ip_address: str) -> None:
         """Validate IPv4 address format.
@@ -186,12 +520,11 @@ class DhcpService:
         return normalized
     
     def _load_static_leases(self) -> None:
-        """Load static lease configurations from dnsmasq config files.
+        """Load static lease configurations from discovered dnsmasq config files.
         
-        Reads all configuration files in the config folder following dnsmasq's 
-        default filtering rules and extracts dhcp-host directives.
+        Reads all configuration files and extracts dhcp-host directives.
         """
-        self.logger.info(f"Loading static leases from config folder: {self.config_folder_path}")
+        self.logger.info("Loading static leases from discovered config files")
         
         # Initialize cache with mac_to_ip and ip_to_mac mappings
         self._static_leases_cache = {
@@ -199,63 +532,30 @@ class DhcpService:
             'ip_to_mac': {}
         }
         
-        config_folder = Path(self.config_folder_path)
-        if not config_folder.exists():
-            self.logger.warning(f"Config folder does not exist: {self.config_folder_path}")
-            return
-        
-        if not config_folder.is_dir():
-            self.logger.warning(f"Config path is not a directory: {self.config_folder_path}")
-            return
-        
         static_count = 0
         
-        try:
-            # Read all files in config folder following dnsmasq filtering rules
-            for file_path in config_folder.iterdir():
-                if not file_path.is_file():
-                    continue
-                
-                filename = file_path.name
-                
-                # Apply dnsmasq's default filtering rules
-                # Exclude files ending with ~ (backup files)
-                if filename.endswith('~'):
-                    continue
-                
-                # Exclude files starting with . (hidden files)
-                if filename.startswith('.'):
-                    continue
-                
-                # Exclude files both starting and ending with # (commented out)
-                if filename.startswith('#') and filename.endswith('#'):
-                    continue
-                
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as file:
-                        for line_num, line in enumerate(file, 1):
-                            line = line.strip()
-                            
-                            # Skip empty lines and comments
-                            if not line or line.startswith('#'):
-                                continue
-                            
-                            # Look for dhcp-host directives
-                            if 'dhcp-host=' in line:
-                                parsed_lease = self._parse_dhcp_host_line(line)
-                                if parsed_lease:
-                                    mac_address, ip_address = parsed_lease
-                                    self._static_leases_cache['mac_to_ip'][mac_address] = ip_address
-                                    self._static_leases_cache['ip_to_mac'][ip_address] = mac_address
-                                    static_count += 1
-                                    
-                except Exception as e:
-                    self.logger.warning(f"Error reading config file {file_path}: {e}")
-                    continue
-                    
-        except Exception as e:
-            self.logger.error(f"Error accessing config folder {self.config_folder_path}: {e}")
-            return
+        for config_file_path in self.config_files:
+            try:
+                with open(config_file_path, 'r', encoding='utf-8') as file:
+                    for line_num, line in enumerate(file, 1):
+                        line = line.strip()
+                        
+                        # Skip empty lines and comments
+                        if not line or line.startswith('#'):
+                            continue
+                        
+                        # Look for dhcp-host directives
+                        if 'dhcp-host=' in line:
+                            parsed_lease = self._parse_dhcp_host_line(line)
+                            if parsed_lease:
+                                mac_address, ip_address = parsed_lease
+                                self._static_leases_cache['mac_to_ip'][mac_address] = ip_address
+                                self._static_leases_cache['ip_to_mac'][ip_address] = mac_address
+                                static_count += 1
+                                
+            except Exception as e:
+                self.logger.warning(f"Error reading config file {config_file_path}: {e}")
+                continue
         
         self.logger.info(f"Loaded {static_count} static lease configurations")
     

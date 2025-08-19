@@ -3,3 +3,5 @@ python-dotenv
 flask-cors
 apispec
 marshmallow
+pytest
+pytest-cov
