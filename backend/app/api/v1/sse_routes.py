@@ -19,10 +19,11 @@ def lease_updates_stream() -> Response:
     """
     logger.info("New SSE client connecting to lease updates stream")
     
+    # Get SSE service from app context before generator execution
+    sse_service = current_app.sse_service
+    
     def generate_sse_stream():
         """Generator function for SSE events."""
-        # Get SSE service from app context
-        sse_service = current_app.sse_service
         
         # Generate unique client ID
         client_id = sse_service.generate_client_id()
