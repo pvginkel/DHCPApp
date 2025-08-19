@@ -14,6 +14,9 @@ class Config:
     HOST: str = os.environ.get('HOST', '0.0.0.0')
     PORT: int = int(os.environ.get('PORT', '5000'))
     
+    # Path configuration
+    ROOT_PATH: str = os.environ.get('ROOT_PATH', '')
+    
     # DHCP configuration paths
     DNSMASQ_CONFIG_FILE_PATH: str = os.environ.get('DNSMASQ_CONFIG_FILE_PATH', '/etc/dnsmasq.conf')
 
@@ -23,6 +26,7 @@ class DevelopmentConfig(Config):
     
     DEBUG: bool = True
     FLASK_ENV: str = 'development'
+    DEV_FAKE_LEASE_CHANGES: bool = True
 
 
 class ProductionConfig(Config):

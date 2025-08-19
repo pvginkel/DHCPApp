@@ -6,11 +6,12 @@ import queue
 import uuid
 from datetime import datetime
 from typing import Dict, List, Any, Optional
-from flask import Response
+from flask import Response, current_app
 
 from app.models.dhcp_lease import DhcpLease
 from app.models.lease_update_event import LeaseUpdateEvent
 from app.services.dhcp_service import DhcpService
+from app.services.dev_lease_modifier import DevLeaseModifier
 
 
 class SseService:
@@ -27,6 +28,7 @@ class SseService:
         self._active_connections: Dict[str, Dict[str, Any]] = {}
         self._cached_leases: Dict[str, DhcpLease] = {}
         self._message_id_counter = 0
+        self._dev_lease_modifier: Optional[DevLeaseModifier] = None
     
     def add_client(self, client_id: str) -> queue.Queue:
         """Register new SSE client connection.
@@ -67,8 +69,12 @@ class SseService:
     def process_lease_change_notification(self) -> None:
         """Re-read leases, detect changes, and broadcast updates."""
         try:
-            # Get current leases from DHCP service
-            current_leases = self.dhcp_service.get_all_leases()
+            # Check if we're in development mode with fake lease changes enabled
+            if self._is_dev_mode_with_fake_changes():
+                current_leases = self._get_fake_modified_leases()
+            else:
+                # Get current leases from DHCP service normally
+                current_leases = self.dhcp_service.get_all_leases()
             
             # Detect changes compared to cached state
             events = self._detect_lease_changes(current_leases)
@@ -224,3 +230,41 @@ class SseService:
             Unique client identifier
         """
         return str(uuid.uuid4())
+    
+    def _is_dev_mode_with_fake_changes(self) -> bool:
+        """Check if development mode with fake lease changes is enabled.
+        
+        Returns:
+            True if dev mode with fake changes is enabled
+        """
+        try:
+            return (
+                current_app.config.get('FLASK_ENV') == 'development' and
+                current_app.config.get('DEV_FAKE_LEASE_CHANGES', False)
+            )
+        except RuntimeError:
+            # Outside of Flask app context
+            return False
+    
+    def _get_fake_modified_leases(self) -> List[DhcpLease]:
+        """Get fake modified leases for development mode.
+        
+        Returns:
+            List of modified leases with fake changes applied
+        """
+        # Initialize dev lease modifier if not already done
+        if self._dev_lease_modifier is None:
+            dhcp_pools = self.dhcp_service.get_dns_pools()
+            self._dev_lease_modifier = DevLeaseModifier(dhcp_pools)
+        
+        # Get base leases from file
+        base_leases = self.dhcp_service.get_all_leases()
+        
+        # Apply fake modifications
+        modified_leases = self._dev_lease_modifier.modify_leases(base_leases)
+        
+        # Cache the modified leases in DHCP service
+        self.dhcp_service.set_modified_lease_data(modified_leases)
+        
+        self.logger.info(f"Generated {len(modified_leases)} fake modified leases")
+        return modified_leases
