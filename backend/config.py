@@ -15,8 +15,7 @@ class Config:
     PORT: int = int(os.environ.get('PORT', '5000'))
     
     # DHCP configuration paths
-    DHCP_LEASE_FILE_PATH: str = os.environ.get('DHCP_LEASE_FILE_PATH', '/var/lib/dhcp/dhcpd.leases')
-    DHCP_CONFIG_FOLDER_PATH: str = os.environ.get('DHCP_CONFIG_FOLDER_PATH', '/etc/dnsmasq.d')
+    DNSMASQ_CONFIG_FILE_PATH: str = os.environ.get('DNSMASQ_CONFIG_FILE_PATH', '/etc/dnsmasq.conf')
 
 
 class DevelopmentConfig(Config):

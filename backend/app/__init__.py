@@ -36,8 +36,7 @@ def create_app(config_name: Optional[str] = None) -> Flask:
     
     # Initialize services
     dhcp_service = DhcpService(
-        app.config['DHCP_LEASE_FILE_PATH'],
-        app.config['DHCP_CONFIG_FOLDER_PATH']
+        app.config['DNSMASQ_CONFIG_FILE_PATH']
     )
     sse_service = SseService(dhcp_service)
     openapi_generator = OpenApiGenerator()

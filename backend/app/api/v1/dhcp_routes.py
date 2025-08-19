@@ -53,3 +53,62 @@ def get_dhcp_leases():
             "Internal server error while retrieving DHCP leases",
             str(e)
         )), 500
+
+
+@api_v1_bp.route('/pools', methods=['GET'])
+def get_dhcp_pools():
+    """Get all DHCP pool information.
+    
+    Returns:
+        JSON response with array of DHCP pool objects or error information
+    """
+    logger.info("DHCP pools endpoint accessed")
+    
+    try:
+        # Use shared DHCP service instance from app context
+        dhcp_service = current_app.dhcp_service
+        logger.debug("Using shared DHCP service instance")
+        
+        # Get all pools
+        pools = dhcp_service.get_dns_pools()
+        
+        # Convert pools to dictionary format for JSON serialization
+        pool_data = [pool.to_dict() for pool in pools]
+        
+        logger.info(f"Successfully retrieved {len(pool_data)} DHCP pools")
+        return jsonify(ResponseHelper.success_response(pool_data))
+        
+    except Exception as e:
+        logger.error(f"Unexpected error retrieving DHCP pools: {e}")
+        return jsonify(ResponseHelper.error_response(
+            "Internal server error while retrieving DHCP pools",
+            str(e)
+        )), 500
+
+
+@api_v1_bp.route('/pools/usage', methods=['GET'])
+def get_dhcp_pool_usage():
+    """Get DHCP pool usage statistics.
+    
+    Returns:
+        JSON response with array of DHCP pool usage statistics or error information
+    """
+    logger.info("DHCP pool usage endpoint accessed")
+    
+    try:
+        # Use shared DHCP service instance from app context
+        dhcp_service = current_app.dhcp_service
+        logger.debug("Using shared DHCP service instance")
+        
+        # Get pool usage statistics
+        usage_stats = dhcp_service.get_pool_usage_statistics()
+        
+        logger.info(f"Successfully retrieved usage statistics for {len(usage_stats)} DHCP pools")
+        return jsonify(ResponseHelper.success_response(usage_stats))
+        
+    except Exception as e:
+        logger.error(f"Unexpected error retrieving DHCP pool usage: {e}")
+        return jsonify(ResponseHelper.error_response(
+            "Internal server error while retrieving DHCP pool usage",
+            str(e)
+        )), 500

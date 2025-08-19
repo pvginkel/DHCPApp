@@ -41,3 +41,8 @@ class DhcpLeaseSchema(BaseSchema):
         required=True,
         metadata={"description": "Whether this is a static DHCP assignment from configuration", "example": False}
     )
+    
+    pool_name = fields.String(
+        allow_none=True,
+        metadata={"description": "Name of the DHCP pool this lease belongs to", "example": "intranet"}
+    )
