@@ -59,7 +59,7 @@ export function StatsCards() {
         value={stats.availableIPs}
         description="Remaining in pool"
         isLoading={isLoading}
-        hasError={hasError || !pools}
+        hasError={hasError || (!pools && !poolsLoading)}
       />
       <StatCard
         title="Expiring Soon"
