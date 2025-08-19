@@ -6,6 +6,7 @@ import re
 from datetime import datetime
 from typing import List, Optional, Dict, Tuple
 from pathlib import Path
+from flask import current_app
 
 from app.models.dhcp_lease import DhcpLease
 from app.models.dhcp_pool import DhcpPool
@@ -32,10 +33,28 @@ class DhcpService:
         # Cache for static leases
         self._static_leases_cache: Dict[str, Dict[str, str]] = {}
         
+        # Cache for modified lease data (development mode)
+        self._modified_leases_cache: Optional[List[DhcpLease]] = None
+        
         # Parse main configuration on initialization
         self._parse_main_config()
         self._discover_config_files()
         self._parse_dhcp_ranges()
+    
+    def _resolve_path(self, path: str) -> str:
+        """Resolve path with ROOT_PATH prefix.
+        
+        Args:
+            path: Original path
+            
+        Returns:
+            Path prefixed with ROOT_PATH
+        """
+        try:
+            root_path = current_app.config.get('ROOT_PATH', '')
+        except RuntimeError:
+            root_path = os.environ.get('ROOT_PATH', '')
+        return os.path.join(root_path, path.lstrip('/')) if root_path else path
     
     def _parse_main_config(self) -> None:
         """Parse the main dnsmasq configuration file to extract paths and settings.
@@ -46,7 +65,8 @@ class DhcpService:
         """
         self.logger.info(f"Parsing main config file: {self.config_file_path}")
         
-        config_file = Path(self.config_file_path)
+        resolved_config_path = self._resolve_path(self.config_file_path)
+        config_file = Path(resolved_config_path)
         if not config_file.exists():
             self.logger.error(f"Main config file not found: {self.config_file_path}")
             raise FileNotFoundError(f"Main config file not found: {self.config_file_path}")
@@ -99,7 +119,8 @@ class DhcpService:
         self.config_files = []
         
         for directory, extension in self.config_directories:
-            dir_path = Path(directory)
+            resolved_directory = self._resolve_path(directory)
+            dir_path = Path(resolved_directory)
             
             if not dir_path.exists():
                 self.logger.warning(f"Config directory does not exist: {directory}")
@@ -338,8 +359,11 @@ class DhcpService:
         
         return statistics
     
-    def get_all_leases(self) -> List[DhcpLease]:
+    def get_all_leases(self, use_modified_data: bool = False) -> List[DhcpLease]:
         """Read lease file and return list of DhcpLease objects.
+        
+        Args:
+            use_modified_data: If True, return cached modified data instead of reading file
         
         Returns:
             List of parsed DHCP lease objects
@@ -349,6 +373,11 @@ class DhcpService:
             PermissionError: If lease file cannot be read
             Exception: For other file access or parsing errors
         """
+        # Return modified data if requested and available
+        if use_modified_data and self._modified_leases_cache is not None:
+            self.logger.info("Returning cached modified lease data")
+            return self._modified_leases_cache.copy()
+        
         if not self.lease_file_path:
             raise FileNotFoundError("No lease file path configured")
         
@@ -359,7 +388,8 @@ class DhcpService:
             self._load_static_leases()
         
         # Check if file exists
-        lease_file = Path(self.lease_file_path)
+        resolved_lease_path = self._resolve_path(self.lease_file_path)  # type: ignore
+        lease_file = Path(resolved_lease_path)
         if not lease_file.exists():
             self.logger.error(f"DHCP lease file not found: {self.lease_file_path}")
             raise FileNotFoundError(f"DHCP lease file not found: {self.lease_file_path}")
@@ -387,7 +417,8 @@ class DhcpService:
         """
         leases = []
         
-        with open(self.lease_file_path, 'r', encoding='utf-8') as file:
+        resolved_lease_path = self._resolve_path(self.lease_file_path)  # type: ignore
+        with open(resolved_lease_path, 'r', encoding='utf-8') as file:
             for line_num, line in enumerate(file, 1):
                 line = line.strip()
                 
@@ -631,3 +662,12 @@ class DhcpService:
                 return True
         
         return False
+    
+    def set_modified_lease_data(self, leases: List[DhcpLease]) -> None:
+        """Set modified lease data cache for development mode.
+        
+        Args:
+            leases: List of modified leases to cache
+        """
+        self._modified_leases_cache = leases.copy() if leases else None
+        self.logger.debug(f"Cached {len(leases) if leases else 0} modified leases")
