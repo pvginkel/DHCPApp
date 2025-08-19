@@ -108,6 +108,17 @@ src/
 - Development server runs on port 3000 with auto-open browser
 - Build output goes to `dist/` directory
 
+## Command Templates
+
+The repository includes command templates for specific development workflows:
+
+- When writing a product brief: @docs/commands/create_brief.md.
+- When planning a new feature: @docs/commands/plan_feature.md.
+- When doing code review: @docs/commands/code_review.md.
+- When planning or implementing a new feature, reference the product brief at @docs/product_brief.md.
+
+Use these files when the user asks you to perform the applicable action.
+
 ## Testing
 
 No test framework is currently configured. When adding tests, follow the established patterns and update this documentation.
