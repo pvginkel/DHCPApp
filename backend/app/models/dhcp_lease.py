@@ -15,7 +15,8 @@ class DhcpLease:
         lease_time: datetime,
         client_id: Optional[str] = None,
         is_static: bool = False,
-        pool_name: Optional[str] = None
+        pool_name: Optional[str] = None,
+        vendor: Optional[str] = None
     ) -> None:
         """Initialize DHCP lease with required fields.
         
@@ -27,6 +28,7 @@ class DhcpLease:
             client_id: Optional client identifier
             is_static: Whether this lease is a static assignment (from dhcp-host config)
             pool_name: Name of the DHCP pool this lease belongs to
+            vendor: Vendor/manufacturer name from MAC address lookup
         """
         self.ip_address = ip_address
         self.mac_address = mac_address
@@ -35,6 +37,7 @@ class DhcpLease:
         self.client_id = client_id
         self.is_static = is_static
         self.pool_name = pool_name
+        self.vendor = vendor
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert lease object to dictionary for JSON serialization.
@@ -50,7 +53,8 @@ class DhcpLease:
             'client_id': self.client_id if self.client_id != '*' else None,
             'is_active': self.is_active(),
             'is_static': self.is_static,
-            'pool_name': self.pool_name
+            'pool_name': self.pool_name,
+            'vendor': self.vendor
         }
     
     def is_active(self) -> bool:

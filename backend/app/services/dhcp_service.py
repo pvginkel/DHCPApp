@@ -10,18 +10,21 @@ from flask import current_app
 
 from app.models.dhcp_lease import DhcpLease
 from app.models.dhcp_pool import DhcpPool
+from app.services.mac_vendor_service import MacVendorService
 
 
 class DhcpService:
     """Service for reading and parsing DHCP lease files and configuration."""
     
-    def __init__(self, config_file_path: str) -> None:
+    def __init__(self, config_file_path: str, mac_vendor_service: Optional[MacVendorService] = None) -> None:
         """Initialize with main dnsmasq configuration file path.
         
         Args:
             config_file_path: Path to the main dnsmasq configuration file
+            mac_vendor_service: Optional service for MAC address vendor lookup
         """
         self.config_file_path = config_file_path
+        self.mac_vendor_service = mac_vendor_service
         self.logger = logging.getLogger(__name__)
         
         # Configuration discovery results
@@ -451,6 +454,11 @@ class DhcpService:
             # Determine which pool this lease belongs to
             pool_name = self._get_pool_for_ip(ip_address)
             
+            # Lookup vendor information
+            vendor = None
+            if self.mac_vendor_service:
+                vendor = self.mac_vendor_service.get_vendor(mac_address)
+            
             return DhcpLease(
                 ip_address=ip_address,
                 mac_address=mac_address,
@@ -458,7 +466,8 @@ class DhcpService:
                 lease_time=lease_time,
                 client_id=client_id,
                 is_static=is_static,
-                pool_name=pool_name
+                pool_name=pool_name,
+                vendor=vendor
             )
             
         except (ValueError, IndexError) as e:

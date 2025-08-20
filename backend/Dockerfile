@@ -19,6 +19,8 @@ WORKDIR /app
 COPY *.py /app
 COPY app /app/app
 
+ENV FLASK_ENV=production
+
 ENTRYPOINT ["tini", "--"]
 
 CMD ["python", "app.py"]

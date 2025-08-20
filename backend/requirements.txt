@@ -3,5 +3,6 @@ python-dotenv
 flask-cors
 apispec
 marshmallow
+mac-vendor-lookup
 pytest
 pytest-cov

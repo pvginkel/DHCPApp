@@ -46,3 +46,8 @@ class DhcpLeaseSchema(BaseSchema):
         allow_none=True,
         metadata={"description": "Name of the DHCP pool this lease belongs to", "example": "intranet"}
     )
+    
+    vendor = fields.String(
+        allow_none=True,
+        metadata={"description": "Device manufacturer/vendor based on MAC address OUI lookup", "example": "Apple, Inc."}
+    )

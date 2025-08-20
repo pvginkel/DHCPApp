@@ -7,6 +7,7 @@ from flask_cors import CORS
 from config import get_config
 from app.services.dhcp_service import DhcpService
 from app.services.sse_service import SseService
+from app.services.mac_vendor_service import MacVendorService
 from app.api.openapi import OpenApiGenerator
 
 
@@ -34,9 +35,12 @@ def create_app(config_name: Optional[str] = None) -> Flask:
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     
-    # Initialize services
+    mac_vendor_service = MacVendorService(
+        update_database=app.config.get('UPDATE_MAC_VENDOR_DATABASE', True)
+    )
     dhcp_service = DhcpService(
-        app.config['DNSMASQ_CONFIG_FILE_PATH']
+        app.config['DNSMASQ_CONFIG_FILE_PATH'],
+        mac_vendor_service=mac_vendor_service
     )
     sse_service = SseService(dhcp_service)
     openapi_generator = OpenApiGenerator()
@@ -44,6 +48,7 @@ def create_app(config_name: Optional[str] = None) -> Flask:
     # Store services in app context for access across modules
     app.sse_service = sse_service
     app.dhcp_service = dhcp_service
+    app.mac_vendor_service = mac_vendor_service
     app.openapi_generator = openapi_generator
     
     # Register blueprints
