@@ -19,6 +19,9 @@ class Config:
     
     # DHCP configuration paths
     DNSMASQ_CONFIG_FILE_PATH: str = os.environ.get('DNSMASQ_CONFIG_FILE_PATH', '/etc/dnsmasq.conf')
+    
+    # MAC vendor configuration
+    UPDATE_MAC_VENDOR_DATABASE: bool = os.environ.get('UPDATE_MAC_VENDOR_DATABASE', 'true').lower() == 'true'
 
 
 class DevelopmentConfig(Config):
@@ -41,6 +44,7 @@ class TestingConfig(Config):
     
     TESTING: bool = True
     DEBUG: bool = True
+    UPDATE_MAC_VENDOR_DATABASE: bool = False
 
 
 def get_config() -> Type[Config]:
