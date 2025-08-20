@@ -3,6 +3,7 @@
 import os
 from dotenv import load_dotenv
 from app import create_app
+from waitress import serve
 
 # Load environment variables from .env file
 load_dotenv()
@@ -21,14 +22,18 @@ if __name__ == '__main__':
     # Log startup information
     mode = "development" if is_dev else "production"
     app.logger.info(f"Starting Flask application in {mode} mode on http://{host}:{port}")
-    if is_dev:
-        app.logger.info(f"Debug mode: {debug}")
     
-    # Run with appropriate settings for environment
-    app.run(
-        host=host,
-        port=port,
-        debug=debug,
-        use_reloader=is_dev,
-        threaded=True
-    )
+    if is_dev:
+        # Development: Use Flask's built-in server with hot reload
+        app.logger.info("Using Flask development server with hot reload")
+        app.run(
+            host=host,
+            port=port,
+            debug=debug,
+            use_reloader=True,
+            threaded=True
+        )
+    else:
+        # Production: Use Waitress WSGI server
+        app.logger.info("Using Waitress WSGI server for production")
+        serve(app, host=host, port=port, threads=20)

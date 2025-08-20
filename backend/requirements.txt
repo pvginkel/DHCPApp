@@ -4,5 +4,6 @@ flask-cors
 apispec
 marshmallow
 mac-vendor-lookup
+waitress
 pytest
 pytest-cov
