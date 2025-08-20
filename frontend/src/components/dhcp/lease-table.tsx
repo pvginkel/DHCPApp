@@ -21,6 +21,11 @@ import { isDataChangedEvent } from '@/lib/utils/sse-utils'
 import type { SSEEvent } from '@/types/sse'
 import { apiKeys } from '@/lib/api/generated/queries'
 import type { components } from '@/lib/api/generated/types'
+import { useLeaseSorting } from '@/hooks/use-lease-sorting'
+import { useLeaseFiltering } from '@/hooks/use-lease-filtering'
+import { TableControls } from '@/components/dhcp/table-controls'
+import { Button } from '@/components/ui/button'
+import type { SortableField } from '@/types/lease'
 
 type DhcpLease = components['schemas']['DhcpLease']
 
@@ -206,8 +211,12 @@ export function LeaseTable() {
     }
   }
 
-  // Always use the managed display state
-  const displayLeases = displayState.leases
+  // Apply sorting and filtering to display leases
+  const { sortConfig, sortedLeases, handleSort } = useLeaseSorting(displayState.leases)
+  const { searchTerm, setSearchTerm, filteredLeases } = useLeaseFiltering(sortedLeases)
+  
+  // Final display leases after sorting and filtering
+  const displayLeases = filteredLeases
 
   if (isLoading) {
     return (
@@ -255,6 +264,32 @@ export function LeaseTable() {
     )
   }
 
+  const getSortIcon = (field: SortableField) => {
+    if (sortConfig.field !== field) {
+      return (
+        <svg className="h-4 w-4 text-muted-foreground/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+        </svg>
+      )
+    }
+    
+    if (sortConfig.direction === 'asc') {
+      return (
+        <svg className="h-4 w-4 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+        </svg>
+      )
+    } else if (sortConfig.direction === 'desc') {
+      return (
+        <svg className="h-4 w-4 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      )
+    }
+    
+    return null
+  }
+
   return (
     <div className="space-y-4">
       {connectionStatus.state === 'error' && (
@@ -272,14 +307,85 @@ export function LeaseTable() {
       )}
       
       <div className="rounded-lg border border-border">
+        <TableControls
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          totalCount={displayState.leases.length}
+          filteredCount={displayLeases.length}
+        />
         <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>IP Address</TableHead>
-            <TableHead>MAC Address</TableHead>
-            <TableHead>Hostname</TableHead>
-            <TableHead>Lease Expiration</TableHead>
-            <TableHead>Status</TableHead>
+            <TableHead>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-auto p-0 font-semibold hover:bg-transparent"
+                onClick={() => handleSort('ip_address')}
+                aria-label="Sort by IP Address"
+              >
+                <span className="flex items-center gap-1">
+                  IP Address
+                  {getSortIcon('ip_address')}
+                </span>
+              </Button>
+            </TableHead>
+            <TableHead>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-auto p-0 font-semibold hover:bg-transparent"
+                onClick={() => handleSort('mac_address')}
+                aria-label="Sort by MAC Address"
+              >
+                <span className="flex items-center gap-1">
+                  MAC Address
+                  {getSortIcon('mac_address')}
+                </span>
+              </Button>
+            </TableHead>
+            <TableHead>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-auto p-0 font-semibold hover:bg-transparent"
+                onClick={() => handleSort('hostname')}
+                aria-label="Sort by Hostname"
+              >
+                <span className="flex items-center gap-1">
+                  Hostname
+                  {getSortIcon('hostname')}
+                </span>
+              </Button>
+            </TableHead>
+            <TableHead>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-auto p-0 font-semibold hover:bg-transparent"
+                onClick={() => handleSort('lease_time')}
+                aria-label="Sort by Lease Expiration"
+              >
+                <span className="flex items-center gap-1">
+                  Lease Expiration
+                  {getSortIcon('lease_time')}
+                </span>
+              </Button>
+            </TableHead>
+            <TableHead>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-auto p-0 font-semibold hover:bg-transparent"
+                onClick={() => handleSort('is_active')}
+                aria-label="Sort by Status"
+              >
+                <span className="flex items-center gap-1">
+                  Status
+                  {getSortIcon('is_active')}
+                </span>
+              </Button>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
