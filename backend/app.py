@@ -6,7 +6,8 @@ from app import create_app
 from waitress import serve
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv(".env")        # load defaults
+load_dotenv(".env.local")  # override
 
 # Create Flask application instance
 app = create_app()
