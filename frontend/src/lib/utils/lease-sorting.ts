@@ -18,6 +18,8 @@ export function getSortKey(lease: DhcpLease, field: SortableField): string | num
       return lease.mac_address.toLowerCase()
     case 'hostname':
       return (lease.hostname || '').toLowerCase()
+    case 'vendor':
+      return (lease.vendor || '').toLowerCase()
     case 'lease_time':
       return new Date(lease.lease_time)
     case 'is_active':

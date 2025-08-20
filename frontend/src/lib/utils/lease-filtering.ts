@@ -28,6 +28,11 @@ export function matchesSearchTerm(lease: DhcpLease, searchTerm: string): boolean
     return true
   }
   
+  // Search in vendor
+  if (lease.vendor && lease.vendor.toLowerCase().includes(term)) {
+    return true
+  }
+  
   // Search in status display text
   const status = getLeaseStatus(lease)
   const statusDisplay = getLeaseStatusDisplay(status)

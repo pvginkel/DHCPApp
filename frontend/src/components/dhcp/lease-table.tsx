@@ -363,6 +363,20 @@ export function LeaseTable() {
                 variant="ghost"
                 size="sm"
                 className="h-auto p-0 font-semibold hover:bg-transparent"
+                onClick={() => handleSort('vendor')}
+                aria-label="Sort by Vendor"
+              >
+                <span className="flex items-center gap-1">
+                  Vendor
+                  {getSortIcon('vendor')}
+                </span>
+              </Button>
+            </TableHead>
+            <TableHead>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-auto p-0 font-semibold hover:bg-transparent"
                 onClick={() => handleSort('lease_time')}
                 aria-label="Sort by Lease Expiration"
               >
@@ -406,6 +420,9 @@ export function LeaseTable() {
                 </TableCell>
                 <TableCell>
                   {lease.hostname || <span className="text-muted-foreground italic">Unknown</span>}
+                </TableCell>
+                <TableCell>
+                  {lease.vendor || <span className="text-muted-foreground italic">Unknown</span>}
                 </TableCell>
                 <TableCell>
                   {formatLeaseExpiration(lease.lease_time)}
