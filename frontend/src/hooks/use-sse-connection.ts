@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { SSEClient } from '../lib/api/sse-client';
 import type { SSEEvent, SSEConnectionStatus } from '../types/sse';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 export interface UseSSEConnectionOptions {
   onEvent?: (event: SSEEvent) => void;
