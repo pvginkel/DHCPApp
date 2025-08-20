@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execSync } from 'child_process'
-import { writeFileSync, mkdirSync, existsSync } from 'fs'
+import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -10,11 +10,41 @@ const generatedDir = join(projectRoot, 'src', 'lib', 'api', 'generated')
 
 // Configuration
 const isProd = process.argv.includes('--prod')
+const useCachedSchema = process.env.USE_CACHED_SCHEMA === 'true'
 const baseUrl = isProd 
   ? process.env.VITE_API_BASE_URL || 'https://your-prod-domain.com/api/v1'
   : process.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1'
 
 const openApiUrl = `${baseUrl}/openapi.json`
+const cachedSchemaPath = join(projectRoot, 'openapi-schema.json')
+
+/**
+ * Loads OpenAPI specification from cached schema file
+ * @returns {object} The cached OpenAPI specification object
+ */
+function loadCachedSchema() {
+  console.log(`📁 Loading cached OpenAPI schema from: ${cachedSchemaPath}`)
+  
+  try {
+    if (!existsSync(cachedSchemaPath)) {
+      throw new Error(`Cached schema file not found at: ${cachedSchemaPath}`)
+    }
+    
+    const schemaContent = readFileSync(cachedSchemaPath, 'utf-8')
+    const spec = JSON.parse(schemaContent)
+    
+    // Basic validation
+    if (!spec.openapi || !spec.paths || !spec.components) {
+      throw new Error('Invalid cached OpenAPI specification: missing required fields')
+    }
+    
+    console.log(`✅ Successfully loaded cached OpenAPI spec (version: ${spec.openapi || 'unknown'})`)
+    return spec
+  } catch (error) {
+    console.error(`❌ Failed to load cached schema:`, error.message)
+    throw error
+  }
+}
 
 /**
  * Fetches OpenAPI specification from the backend
@@ -318,6 +348,7 @@ async function generateApiCode() {
   try {
     console.log('🚀 Starting OpenAPI code generation...')
     console.log(`📍 Environment: ${isProd ? 'Production' : 'Development'}`)
+    console.log(`📁 Use cached schema: ${useCachedSchema}`)
     
     // Ensure output directory exists
     if (!existsSync(generatedDir)) {
@@ -325,8 +356,21 @@ async function generateApiCode() {
       console.log(`📁 Created directory: ${generatedDir}`)
     }
     
-    // Fetch OpenAPI specification
-    const spec = await fetchOpenApiSpec(openApiUrl)
+    // Get OpenAPI specification - use cached or fetch from backend
+    let spec
+    if (useCachedSchema) {
+      spec = loadCachedSchema()
+    } else {
+      try {
+        spec = await fetchOpenApiSpec(openApiUrl)
+        // Update cached schema file for future use
+        console.log(`💾 Updating cached schema: ${cachedSchemaPath}`)
+        writeFileSync(cachedSchemaPath, JSON.stringify(spec, null, 2), 'utf-8')
+      } catch (error) {
+        console.log(`⚠️  Backend fetch failed, attempting to use cached schema...`)
+        spec = loadCachedSchema()
+      }
+    }
     
     // Save the spec for reference
     const specPath = join(generatedDir, 'openapi-spec.json')
