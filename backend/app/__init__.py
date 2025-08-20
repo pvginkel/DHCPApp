@@ -11,7 +11,16 @@ from app.services.mac_vendor_service import MacVendorService
 from app.api.openapi import OpenApiGenerator
 
 
-def create_app(config_name: Optional[str] = None) -> Flask:
+class DHCPApp(Flask):
+    """Extended Flask app with typed service attributes."""
+    
+    sse_service: SseService
+    dhcp_service: DhcpService
+    mac_vendor_service: MacVendorService
+    openapi_generator: OpenApiGenerator
+
+
+def create_app(config_name: Optional[str] = None) -> DHCPApp:
     """Application factory function to create Flask app instance.
     
     Args:
@@ -20,7 +29,7 @@ def create_app(config_name: Optional[str] = None) -> Flask:
     Returns:
         Configured Flask application instance
     """
-    app = Flask(__name__)
+    app = DHCPApp(__name__)
     
     # Load configuration
     config_class = get_config()
