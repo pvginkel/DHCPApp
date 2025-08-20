@@ -32,8 +32,8 @@ def create_app(config_name: Optional[str] = None) -> DHCPApp:
     app = DHCPApp(__name__)
     
     # Load configuration
-    config_class = get_config()
-    app.config.from_object(config_class)
+    config_instance = get_config()
+    app.config.from_object(config_instance)
     
     # Set up CORS for future SPA integration
     CORS(app)
