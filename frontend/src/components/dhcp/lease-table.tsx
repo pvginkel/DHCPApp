@@ -182,7 +182,7 @@ export function LeaseTable() {
       rawDataRef.current = [...rawLeases]
       setDisplayState({ leases: rawLeases, changes: {} })
     }
-  }, [rawLeases])
+  }, [rawLeases, queryClient])
 
   // Cleanup timeout on unmount
   useEffect(() => {

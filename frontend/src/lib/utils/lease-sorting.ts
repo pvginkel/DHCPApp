@@ -25,7 +25,7 @@ export function getSortKey(lease: DhcpLease, field: SortableField): string | num
     case 'is_static':
       return lease.is_static ? 1 : 0
     default:
-      return ''
+      throw new Error(`Unsupported sort field: ${field}`)
   }
 }
 
