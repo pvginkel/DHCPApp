@@ -31,35 +31,30 @@ interface LeaseChangeState {
   };
 }
 
-interface AnimationPhase {
-  displayLeases: DhcpLease[];
-  changes: LeaseChangeState;
-}
 
 export function LeaseTable() {
   const queryClient = useQueryClient()
-  const previousLeasesRef = useRef<DhcpLease[]>([])
-  const [animationPhase, setAnimationPhase] = useState<AnimationPhase | null>(null)
-  const [pendingUpdates, setPendingUpdates] = useState<boolean>(false)
+  const rawDataRef = useRef<DhcpLease[] | null>(null)
+  const [displayState, setDisplayState] = useState<{
+    leases: DhcpLease[];
+    changes: LeaseChangeState;
+  }>({ leases: [], changes: {} })
   const animationTimeoutRef = useRef<number | null>(null)
-  const updateQueueRef = useRef<(() => void)[]>([])
+  const isAnimatingRef = useRef<boolean>(false)
+  const hasPendingUpdateRef = useRef<boolean>(false)
   
   const handleSSEEvent = useCallback((event: SSEEvent) => {
     if (isDataChangedEvent(event)) {
-      const updateFunction = () => {
+      // If animation is in progress, just set the flag
+      if (isAnimatingRef.current) {
+        hasPendingUpdateRef.current = true
+      } else {
+        // Execute immediately if not animating
         queryClient.invalidateQueries({ queryKey: [...apiKeys.all, 'leases'] })
         queryClient.invalidateQueries({ queryKey: [...apiKeys.all, 'status'] })
       }
-      
-      // If animation is in progress, queue the update
-      if (animationPhase) {
-        updateQueueRef.current.push(updateFunction)
-        setPendingUpdates(true)
-      } else {
-        updateFunction()
-      }
     }
-  }, [queryClient, animationPhase])
+  }, [queryClient])
 
   const handleSSEError = useCallback((error: Error) => {
     console.warn('SSE connection error:', error.message)
@@ -72,111 +67,117 @@ export function LeaseTable() {
     maxReconnectAttempts: 10,
   })
 
-  const { data: leases, isLoading, error } = useLeasesQuery()
+  const { data: rawLeases, isLoading, error } = useLeasesQuery()
   
   useEffect(() => {
     // Skip processing if we're currently animating
-    if (animationPhase) {
+    if (isAnimatingRef.current) {
       return
     }
     
-    // Only trigger animations if we have previous leases to compare against
-    // This prevents animations on initial load
-    if (leases && previousLeasesRef.current.length > 0) {
-      const newChanges: LeaseChangeState = {}
-      const previousLeases = previousLeasesRef.current
-      const currentTime = Date.now()
+    // If no new data, skip
+    if (!rawLeases) {
+      return
+    }
+    
+    // Initial load - just set the display state without animation
+    if (!rawDataRef.current) {
+      rawDataRef.current = [...rawLeases]
+      setDisplayState({ leases: rawLeases, changes: {} })
+      return
+    }
+    
+    // Compare with previous data to detect changes
+    const newChanges: LeaseChangeState = {}
+    const previousLeases = rawDataRef.current
+    const currentTime = Date.now()
+    
+    const previousLeaseMap = new Map(
+      previousLeases.map(lease => [`${lease.ip_address}-${lease.mac_address}`, lease])
+    )
+    const currentLeaseMap = new Map(
+      rawLeases.map(lease => [`${lease.ip_address}-${lease.mac_address}`, lease])
+    )
+    
+    // Check for added and updated leases
+    for (const lease of rawLeases) {
+      const leaseKey = `${lease.ip_address}-${lease.mac_address}`
+      const previousLease = previousLeaseMap.get(leaseKey)
       
-      const previousLeaseMap = new Map(
-        previousLeases.map(lease => [`${lease.ip_address}-${lease.mac_address}`, lease])
-      )
-      const currentLeaseMap = new Map(
-        leases.map(lease => [`${lease.ip_address}-${lease.mac_address}`, lease])
-      )
-      
-      // Check for added and updated leases
-      for (const lease of leases) {
-        const leaseKey = `${lease.ip_address}-${lease.mac_address}`
-        const previousLease = previousLeaseMap.get(leaseKey)
-        
-        if (!previousLease) {
-          newChanges[leaseKey] = { type: 'added', timestamp: currentTime }
-        } else if (JSON.stringify(previousLease) !== JSON.stringify(lease)) {
-          newChanges[leaseKey] = { type: 'updated', timestamp: currentTime }
-        }
-      }
-      
-      // Check for removed leases
-      const removedLeases: DhcpLease[] = []
-      for (const [leaseKey, lease] of previousLeaseMap) {
-        if (!currentLeaseMap.has(leaseKey)) {
-          newChanges[leaseKey] = { type: 'removing', timestamp: currentTime }
-          removedLeases.push(lease)
-        }
-      }
-      
-      if (Object.keys(newChanges).length > 0) {
-        // Phase 1: Create frozen state with all leases (including removed ones in original positions)
-        // Merge previous leases with new ones, keeping original order for removed items
-        const frozenDisplayLeases: DhcpLease[] = []
-        const processedKeys = new Set<string>()
-        
-        // First, add all previous leases in their original order
-        for (const prevLease of previousLeases) {
-          const leaseKey = `${prevLease.ip_address}-${prevLease.mac_address}`
-          const currentLease = currentLeaseMap.get(leaseKey)
-          
-          if (currentLease) {
-            // Use updated data if available
-            frozenDisplayLeases.push(currentLease)
-          } else {
-            // Keep removed lease in original position
-            frozenDisplayLeases.push(prevLease)
-          }
-          processedKeys.add(leaseKey)
-        }
-        
-        // Then add any new leases at the end
-        for (const newLease of leases) {
-          const leaseKey = `${newLease.ip_address}-${newLease.mac_address}`
-          if (!processedKeys.has(leaseKey)) {
-            frozenDisplayLeases.push(newLease)
-          }
-        }
-        
-        // Start Phase 1: Show animations in original positions
-        setAnimationPhase({
-          displayLeases: frozenDisplayLeases,
-          changes: newChanges,
-        })
-        
-        // Clear any existing timeout
-        if (animationTimeoutRef.current) {
-          clearTimeout(animationTimeoutRef.current)
-        }
-        
-        // Phase 2: After animation completes, apply real data update
-        animationTimeoutRef.current = window.setTimeout(() => {
-          setAnimationPhase(null)
-          previousLeasesRef.current = [...leases]
-          
-          // Process any queued updates
-          if (updateQueueRef.current.length > 0) {
-            const queuedUpdates = [...updateQueueRef.current]
-            updateQueueRef.current = []
-            setPendingUpdates(false)
-            
-            // Execute queued updates
-            queuedUpdates.forEach(update => update())
-          }
-        }, 1000)
+      if (!previousLease) {
+        newChanges[leaseKey] = { type: 'added', timestamp: currentTime }
+      } else if (JSON.stringify(previousLease) !== JSON.stringify(lease)) {
+        newChanges[leaseKey] = { type: 'updated', timestamp: currentTime }
       }
     }
     
-    if (leases && !animationPhase) {
-      previousLeasesRef.current = [...leases]
+    // Check for removed leases
+    for (const [leaseKey] of previousLeaseMap) {
+      if (!currentLeaseMap.has(leaseKey)) {
+        newChanges[leaseKey] = { type: 'removing', timestamp: currentTime }
+      }
     }
-  }, [leases, animationPhase])
+    
+    if (Object.keys(newChanges).length > 0) {
+      // Create display state with all leases (including removed ones in original positions)
+      const frozenDisplayLeases: DhcpLease[] = []
+      const processedKeys = new Set<string>()
+      
+      // First, add all previous leases in their original order
+      for (const prevLease of previousLeases) {
+        const leaseKey = `${prevLease.ip_address}-${prevLease.mac_address}`
+        const currentLease = currentLeaseMap.get(leaseKey)
+        
+        if (currentLease) {
+          // Use updated data if available
+          frozenDisplayLeases.push(currentLease)
+        } else {
+          // Keep removed lease in original position
+          frozenDisplayLeases.push(prevLease)
+        }
+        processedKeys.add(leaseKey)
+      }
+      
+      // Then add any new leases at the end
+      for (const newLease of rawLeases) {
+        const leaseKey = `${newLease.ip_address}-${newLease.mac_address}`
+        if (!processedKeys.has(leaseKey)) {
+          frozenDisplayLeases.push(newLease)
+        }
+      }
+      
+      // Phase 1: Show animations with frozen display state
+      isAnimatingRef.current = true
+      setDisplayState({
+        leases: frozenDisplayLeases,
+        changes: newChanges,
+      })
+      
+      // Clear any existing timeout
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current)
+      }
+      
+      // Phase 2: After animation completes, apply real data update
+      animationTimeoutRef.current = window.setTimeout(() => {
+        isAnimatingRef.current = false
+        rawDataRef.current = [...rawLeases]
+        setDisplayState({ leases: rawLeases, changes: {} })
+        
+        // Check for pending updates
+        if (hasPendingUpdateRef.current) {
+          hasPendingUpdateRef.current = false
+          // Trigger a new data fetch
+          queryClient.invalidateQueries({ queryKey: [...apiKeys.all, 'leases'] })
+          queryClient.invalidateQueries({ queryKey: [...apiKeys.all, 'status'] })
+        }
+      }, 1000)
+    } else {
+      // No changes detected, just update the display state
+      rawDataRef.current = [...rawLeases]
+      setDisplayState({ leases: rawLeases, changes: {} })
+    }
+  }, [rawLeases])
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -189,7 +190,7 @@ export function LeaseTable() {
 
   const getRowClassName = (lease: DhcpLease) => {
     const leaseKey = `${lease.ip_address}-${lease.mac_address}`
-    const change = animationPhase?.changes[leaseKey]
+    const change = displayState.changes[leaseKey]
     
     if (!change) return ''
     
@@ -205,8 +206,8 @@ export function LeaseTable() {
     }
   }
 
-  // Use animation phase display leases if animating, otherwise use current leases
-  const displayLeases = animationPhase ? animationPhase.displayLeases : (leases || [])
+  // Always use the managed display state
+  const displayLeases = displayState.leases
 
   if (isLoading) {
     return (
@@ -266,17 +267,6 @@ export function LeaseTable() {
                 {connectionStatus.error || 'Connection to live updates failed. Data shown may not be current.'}
               </p>
             </div>
-          </div>
-        </div>
-      )}
-      
-      {pendingUpdates && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-          <div className="flex items-center space-x-2">
-            <div className="h-3 w-3 rounded-full bg-blue-500 animate-pulse"></div>
-            <p className="text-sm text-blue-600">
-              Updates pending... (processing after animation completes)
-            </p>
           </div>
         </div>
       )}
