@@ -30,6 +30,7 @@ class DevelopmentConfig(Config):
     DEBUG: bool = True
     FLASK_ENV: str = 'development'
     DEV_FAKE_LEASE_CHANGES: bool = True
+    UPDATE_MAC_VENDOR_DATABASE: bool = False  # Skip OUI database update in development for faster startup
 
 
 class ProductionConfig(Config):

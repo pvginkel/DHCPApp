@@ -36,6 +36,19 @@ class TestMacVendorService:
             assert service.lookup == mock_lookup
             mock_update.assert_called_once()
     
+    def test_development_mode_skips_database_update(self):
+        """Test that development mode skips database update by default."""
+        with patch('app.services.mac_vendor_service.MacLookup') as mock_lookup_class:
+            mock_lookup = Mock()
+            mock_lookup_class.return_value = mock_lookup
+            
+            # Test with update_database=False (as set in DevelopmentConfig)
+            service = MacVendorService(update_database=False)
+            
+            assert service.lookup == mock_lookup
+            # Verify _update_database was not called
+            mock_lookup.update_vendors.assert_not_called()
+    
     def test_cache_path_uses_temp_directory(self):
         """Test that cache path uses cross-platform temporary directory."""
         with patch('app.services.mac_vendor_service.MacLookup'), \

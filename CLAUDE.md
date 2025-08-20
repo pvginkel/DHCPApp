@@ -33,6 +33,7 @@ workon dhcp-backend
   - `DNSMASQ_CONFIG_FILE_PATH` - Path to main dnsmasq config (required)
   - `FLASK_ENV` - Environment (development/production/testing)
   - `HOST`, `PORT` - Server binding configuration
+  - `UPDATE_MAC_VENDOR_DATABASE` - Enable/disable MAC vendor database updates (default: true for production, false for development/testing)
 
 ## Architecture Overview
 
