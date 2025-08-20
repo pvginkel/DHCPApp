@@ -43,35 +43,39 @@ def lease_updates_stream() -> Response:
             )
             yield initial_message
             
-            # Send periodic heartbeat and process queued messages
-            heartbeat_interval = 30  # seconds
-            last_heartbeat = time.time()
+            # Send periodic heartbeat and process queued messages. The heartbeat is
+            # set quite low because waitress doesn't properly detect client disconnections.
+            # This is a workaround to ensure we can detect disconnections in a timely manner.
+            heartbeat_interval = 5  # seconds
+            start = time.perf_counter()
             
             while True:
-                current_time = time.time()
+                while True:
+                    elapsed = time.perf_counter() - start
+                    if elapsed >= heartbeat_interval:
+                        break
+
+                    remaining = heartbeat_interval - elapsed
+
+                    # Check for queued messages
+                    try:
+                        # Non-blocking check for new messages
+                        logger.info(f"Checking for messages in queue for client {client_id} waiting for {remaining:.2f} seconds")
+                        message = message_queue.get(timeout=remaining)
+                        yield message
+                    except queue.Empty:
+                        pass
                 
-                # Check for queued messages
-                try:
-                    # Non-blocking check for new messages
-                    message = message_queue.get_nowait()
-                    yield message
-                except queue.Empty:
-                    pass
-                
-                # Send heartbeat every 30 seconds
-                if current_time - last_heartbeat >= heartbeat_interval:
-                    heartbeat_message = sse_service._format_sse_message(
-                        'heartbeat',
-                        {
-                            'timestamp': current_time,
-                            'active_connections': sse_service.get_active_connections_count()
-                        }
-                    )
-                    yield heartbeat_message
-                    last_heartbeat = current_time
-                
-                # Small delay to prevent busy waiting
-                time.sleep(0.1)
+                start += heartbeat_interval
+
+                heartbeat_message = sse_service._format_sse_message(
+                    'heartbeat',
+                    {
+                        'timestamp': time.time(),
+                        'active_connections': sse_service.get_active_connections_count()
+                    }
+                )
+                yield heartbeat_message
                 
         except GeneratorExit:
             # Client disconnected
