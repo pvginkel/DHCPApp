@@ -2,6 +2,7 @@ import { createRootRoute, Outlet } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ErrorBoundary } from '@/components/common/error-boundary'
 import { Layout } from '@/components/layout/layout'
+import { useSystemTheme } from '@/hooks/use-system-theme'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -12,8 +13,10 @@ const queryClient = new QueryClient({
   },
 })
 
-export const Route = createRootRoute({
-  component: () => (
+function RootComponent() {
+  useSystemTheme()
+  
+  return (
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary>
         <Layout>
@@ -21,5 +24,9 @@ export const Route = createRootRoute({
         </Layout>
       </ErrorBoundary>
     </QueryClientProvider>
-  ),
+  )
+}
+
+export const Route = createRootRoute({
+  component: RootComponent,
 })

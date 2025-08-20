@@ -75,7 +75,7 @@
 
 @keyframes leaseFlashAdded {
   0% {
-    background-color: theme('colors.green.50');
+    background-color: hsl(120 60% 90%);
   }
   100% {
     background-color: transparent;
@@ -84,7 +84,7 @@
 
 @keyframes leaseFlashUpdated {
   0% {
-    background-color: theme('colors.blue.50');
+    background-color: hsl(210 60% 90%);
   }
   100% {
     background-color: transparent;
@@ -93,7 +93,46 @@
 
 @keyframes leaseFlashRemoving {
   0% {
-    background-color: theme('colors.red.50');
+    background-color: hsl(0 60% 90%);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.dark .lease-flash-added {
+  animation: leaseFlashAddedDark 1s ease-out;
+}
+
+.dark .lease-flash-updated {
+  animation: leaseFlashUpdatedDark 1s ease-out;
+}
+
+.dark .lease-flash-removing {
+  animation: leaseFlashRemovingDark 1s ease-out;
+}
+
+@keyframes leaseFlashAddedDark {
+  0% {
+    background-color: hsl(120 30% 20%);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes leaseFlashUpdatedDark {
+  0% {
+    background-color: hsl(210 30% 20%);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes leaseFlashRemovingDark {
+  0% {
+    background-color: hsl(0 30% 20%);
   }
   100% {
     background-color: transparent;
