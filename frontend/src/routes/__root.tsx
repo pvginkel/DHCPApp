@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ErrorBoundary } from '@/components/common/error-boundary'
 import { Layout } from '@/components/layout/layout'
 import { useSystemTheme } from '@/hooks/use-system-theme'
+import { SSEProvider } from '@/contexts/sse-context'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,11 +19,13 @@ function RootComponent() {
   
   return (
     <QueryClientProvider client={queryClient}>
-      <ErrorBoundary>
-        <Layout>
-          <Outlet />
-        </Layout>
-      </ErrorBoundary>
+      <SSEProvider>
+        <ErrorBoundary>
+          <Layout>
+            <Outlet />
+          </Layout>
+        </ErrorBoundary>
+      </SSEProvider>
     </QueryClientProvider>
   )
 }

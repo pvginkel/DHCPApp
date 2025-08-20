@@ -1,11 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { LeaseTable } from '@/components/dhcp/lease-table'
 import { StatsCards } from '@/components/dhcp/stats-cards'
-import { useSSEConnection } from '@/hooks/use-sse-connection'
+import { useSSEContext } from '@/contexts/sse-context'
 import { formatConnectionStatus } from '@/lib/utils/sse-utils'
 
 function HomePage() {
-  const { connectionStatus } = useSSEConnection();
+  const { connectionStatus } = useSSEContext();
   const { label, color } = formatConnectionStatus(connectionStatus.state);
   
   const dotColor = connectionStatus.state === 'connected' 

@@ -14,12 +14,8 @@ import {
   getLeaseStatus, 
   getLeaseStatusDisplay 
 } from '@/lib/utils/lease-utils'
-import { useSSEConnection } from '@/hooks/use-sse-connection'
-import { useQueryClient } from '@tanstack/react-query'
-import { useCallback, useRef, useState, useEffect } from 'react'
-import { isDataChangedEvent } from '@/lib/utils/sse-utils'
-import type { SSEEvent } from '@/types/sse'
-import { apiKeys } from '@/lib/api/generated/queries'
+import { useSSEContext } from '@/contexts/sse-context'
+import { useRef, useState, useEffect } from 'react'
 import type { components } from '@/lib/api/generated/types'
 import { useLeaseSorting } from '@/hooks/use-lease-sorting'
 import { useLeaseFiltering } from '@/hooks/use-lease-filtering'
@@ -38,7 +34,6 @@ interface LeaseChangeState {
 
 
 export function LeaseTable() {
-  const queryClient = useQueryClient()
   const rawDataRef = useRef<DhcpLease[] | null>(null)
   const [displayState, setDisplayState] = useState<{
     leases: DhcpLease[];
@@ -46,40 +41,12 @@ export function LeaseTable() {
   }>({ leases: [], changes: {} })
   const animationTimeoutRef = useRef<number | null>(null)
   const isAnimatingRef = useRef<boolean>(false)
-  const hasPendingUpdateRef = useRef<boolean>(false)
   
-  const handleSSEEvent = useCallback((event: SSEEvent) => {
-    if (isDataChangedEvent(event)) {
-      // If animation is in progress, just set the flag
-      if (isAnimatingRef.current) {
-        hasPendingUpdateRef.current = true
-      } else {
-        // Execute immediately if not animating
-        queryClient.invalidateQueries({ queryKey: [...apiKeys.all, 'leases'] })
-        queryClient.invalidateQueries({ queryKey: [...apiKeys.all, 'status'] })
-      }
-    }
-  }, [queryClient])
-
-  const handleSSEError = useCallback((error: Error) => {
-    console.warn('SSE connection error:', error.message)
-  }, [])
-
-  const { connectionStatus } = useSSEConnection({
-    onEvent: handleSSEEvent,
-    onError: handleSSEError,
-    autoConnect: true,
-    maxReconnectAttempts: 10,
-  })
+  const { connectionStatus } = useSSEContext()
 
   const { data: rawLeases, isLoading, error } = useLeasesQuery()
   
   useEffect(() => {
-    // Skip processing if we're currently animating
-    if (isAnimatingRef.current) {
-      return
-    }
-    
     // If no new data, skip
     if (!rawLeases) {
       return
@@ -168,21 +135,13 @@ export function LeaseTable() {
         isAnimatingRef.current = false
         rawDataRef.current = [...rawLeases]
         setDisplayState({ leases: rawLeases, changes: {} })
-        
-        // Check for pending updates
-        if (hasPendingUpdateRef.current) {
-          hasPendingUpdateRef.current = false
-          // Trigger a new data fetch
-          queryClient.invalidateQueries({ queryKey: [...apiKeys.all, 'leases'] })
-          queryClient.invalidateQueries({ queryKey: [...apiKeys.all, 'status'] })
-        }
       }, 1000)
     } else {
       // No changes detected, just update the display state
       rawDataRef.current = [...rawLeases]
       setDisplayState({ leases: rawLeases, changes: {} })
     }
-  }, [rawLeases, queryClient])
+  }, [rawLeases])
 
   // Cleanup timeout on unmount
   useEffect(() => {
