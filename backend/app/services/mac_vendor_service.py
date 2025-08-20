@@ -1,13 +1,18 @@
 from mac_vendor_lookup import MacLookup, OUI_URL, AsyncMacLookup
 from typing import Optional
 import logging
+import tempfile
+import os
+from urllib.parse import urlparse, urlunparse
 
 
 class MacVendorService:
     def __init__(self, update_database: bool = True):
         # This doesn't make sense and is a bug in the library. This is the only way
         # to set the path where the database is stored.
-        AsyncMacLookup.cache_path = '/tmp/mac-vendors.txt'
+        # Using cross-platform temporary directory instead of hardcoded /tmp/
+        cache_dir = tempfile.gettempdir()
+        AsyncMacLookup.cache_path = os.path.join(cache_dir, 'mac-vendors.txt')
         
         self.lookup = MacLookup()
         self.logger = logging.getLogger(__name__)
@@ -18,8 +23,9 @@ class MacVendorService:
     def _update_database(self) -> None:
         """Update the OUI database from IEEE using secure HTTPS endpoint."""
         try:
-            # Convert HTTP URL to HTTPS for secure connection
-            secure_url = OUI_URL.replace('http://', 'https://')
+            # Convert HTTP URL to HTTPS for secure connection using proper URL parsing
+            parsed = urlparse(OUI_URL)
+            secure_url = urlunparse(parsed._replace(scheme='https'))
             self.logger.info(f"Updating MAC vendor database from: {secure_url}")
             
             self.lookup.update_vendors(url=secure_url)

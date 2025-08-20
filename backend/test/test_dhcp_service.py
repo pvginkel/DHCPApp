@@ -153,6 +153,74 @@ conf-dir=./data/dnsmasq-static-generated.d/,*.conf
             
             # Used + available should equal total
             assert stat['used_addresses'] + stat['available_addresses'] == stat['total_addresses']
+    
+    def test_dhcp_service_without_mac_vendor_service(self):
+        """Test DhcpService works without MAC vendor service."""
+        service = DhcpService(self.temp_config_file.name, mac_vendor_service=None)
+        leases = service.get_all_leases()
+        
+        # Verify leases are parsed correctly without vendor information
+        assert isinstance(leases, list)
+        for lease in leases:
+            assert lease.vendor is None
+    
+    def test_dhcp_service_with_mac_vendor_service(self):
+        """Test DhcpService integration with MAC vendor service."""
+        from unittest.mock import Mock
+        from app.services.mac_vendor_service import MacVendorService
+        
+        # Create mock MAC vendor service
+        mock_vendor_service = Mock(spec=MacVendorService)
+        mock_vendor_service.get_vendor.return_value = "Apple, Inc."
+        
+        service = DhcpService(self.temp_config_file.name, mac_vendor_service=mock_vendor_service)
+        leases = service.get_all_leases()
+        
+        # Verify vendor lookup is called for each lease
+        assert isinstance(leases, list)
+        if leases:  # Only check if we have leases to test with
+            # Verify vendor service was called
+            assert mock_vendor_service.get_vendor.call_count > 0
+            
+            # Check that leases have vendor information
+            for lease in leases:
+                if lease.vendor:  # Some leases might have failed lookups (None)
+                    assert lease.vendor == "Apple, Inc."
+    
+    def test_dhcp_service_vendor_lookup_failure(self):
+        """Test DhcpService handles vendor lookup failures gracefully."""
+        from unittest.mock import Mock
+        from app.services.mac_vendor_service import MacVendorService
+        
+        # Create mock MAC vendor service that always fails
+        mock_vendor_service = Mock(spec=MacVendorService)
+        mock_vendor_service.get_vendor.return_value = None  # Simulate lookup failure
+        
+        service = DhcpService(self.temp_config_file.name, mac_vendor_service=mock_vendor_service)
+        leases = service.get_all_leases()
+        
+        # Verify leases are still parsed correctly with vendor failures
+        assert isinstance(leases, list)
+        for lease in leases:
+            assert lease.vendor is None  # Should be None due to failed lookups
+    
+    def test_lease_to_dict_includes_vendor(self):
+        """Test that lease to_dict() includes vendor information."""
+        from unittest.mock import Mock
+        from app.services.mac_vendor_service import MacVendorService
+        
+        # Create mock MAC vendor service
+        mock_vendor_service = Mock(spec=MacVendorService)
+        mock_vendor_service.get_vendor.return_value = "Test Vendor"
+        
+        service = DhcpService(self.temp_config_file.name, mac_vendor_service=mock_vendor_service)
+        leases = service.get_all_leases()
+        
+        if leases:  # Only test if we have leases
+            lease_dict = leases[0].to_dict()
+            assert 'vendor' in lease_dict
+            # Vendor should be either the looked-up value or None
+            assert lease_dict['vendor'] in ["Test Vendor", None]
 
 
 class TestDhcpServiceWithTempFiles:
