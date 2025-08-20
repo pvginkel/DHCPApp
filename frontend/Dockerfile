@@ -7,10 +7,6 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 # Set working directory
 WORKDIR /app
 
-# Set environment variables for production
-ARG VITE_API_BASE_URL
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-
 # Copy package files for dependency caching
 COPY package.json pnpm-lock.yaml ./
 
