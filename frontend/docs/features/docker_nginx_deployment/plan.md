@@ -9,6 +9,7 @@ Create a Dockerfile that builds the React frontend application and deploys it in
 - `Dockerfile` - Multi-stage Docker build file for frontend application
 - `.dockerignore` - Docker ignore file to exclude unnecessary files from build context
 - `nginx.conf` - NGINX configuration file for SPA routing and static file serving
+- `openapi-schema.json` - Cached OpenAPI schema file for Docker builds (checked into git)
 
 ### Files to Reference
 - `package.json:8` - Build script: `"build": "pnpm generate:api && tsc -b && vite build"`
@@ -16,13 +17,17 @@ Create a Dockerfile that builds the React frontend application and deploys it in
 - `vite.config.ts:7-25` - Vite configuration with build output settings
 - `scripts/generate-api.js` - API generation script that requires backend connection
 
+### Files to Modify
+- `scripts/generate-api.js` - Update to support using cached schema file during Docker builds
+
 ### Build Process Analysis
 - Build command: `pnpm build` which runs:
-  1. `pnpm generate:api` - Generates API client from OpenAPI spec
+  1. `pnpm generate:api` - Generates API client from OpenAPI spec (or cached schema)
   2. `tsc -b` - TypeScript compilation
   3. `vite build` - Vite production build
 - Build output: Static files in `dist/` directory (default Vite output)
 - Dependencies: pnpm package manager, Node.js runtime
+- Schema caching: Uses `openapi-schema.json` when backend is not available (Docker builds)
 
 ## Step-by-Step Implementation
 
@@ -35,9 +40,9 @@ Create a Dockerfile that builds the React frontend application and deploys it in
    - Install pnpm package manager
    - Copy package.json and pnpm-lock.yaml for dependency caching
    - Install dependencies with `pnpm install --frozen-lockfile`
-   - Copy source code and configuration files
-   - Handle API generation requirement (may need mock/prod endpoint)
-   - Run build process: `pnpm build`
+   - Copy source code, configuration files, and cached OpenAPI schema
+   - Set environment flag to use cached schema for API generation
+   - Run build process: `pnpm build` (uses cached schema)
 
 3. **Production stage implementation**
    - Use lightweight NGINX alpine base image
@@ -70,17 +75,21 @@ Create a Dockerfile that builds the React frontend application and deploys it in
    - Minimize final image size with alpine base images
    - Multi-stage build to exclude development dependencies
 
-### Phase 4: API Generation Considerations
-1. **Handle API generation requirement**
-   - Option A: Use production API endpoint during build
-   - Option B: Pre-generate API client and include in source
-   - Option C: Build-time environment variable configuration
-   - Configure VITE_API_BASE_URL for containerized deployment
+### Phase 4: Cached Schema Implementation
+1. **Implement cached schema system**
+   - Create `openapi-schema.json` file in project root (checked into git)
+   - Modify `scripts/generate-api.js` to detect cached schema usage
+   - Add environment variable `USE_CACHED_SCHEMA` for Docker builds
 
-2. **Environment configuration**
-   - Support runtime environment variable injection
-   - Configure API base URL for different deployment environments
-   - Handle production vs development API endpoints
+2. **API generation logic updates**
+   - During development: Download schema from running backend and update cache
+   - During Docker build: Use cached schema file when backend unavailable
+   - Fallback mechanism: Use cached schema if backend connection fails
+   - Validate cached schema exists before using it
+
+3. **Development workflow**
+   - `pnpm generate:api` - Uses backend if available, falls back to cached schema
+   - `pnpm build` - In Docker: uses cached schema, in development: uses backend
 
 ## Algorithm Details
 
@@ -92,9 +101,9 @@ Stage 1 (Build):
 3. Set working directory
 4. Copy package files for dependency caching
 5. Install production and development dependencies
-6. Copy source code and configuration
-7. Set environment variables for API generation
-8. Run API generation (with prod endpoint or mock)
+6. Copy source code, configuration, and cached OpenAPI schema
+7. Set USE_CACHED_SCHEMA=true environment variable
+8. Run API generation (uses cached schema file)
 9. Execute build process (TypeScript + Vite)
 10. Output static files to dist/ directory
 
@@ -123,17 +132,22 @@ Stage 2 (Production):
 
 ## Implementation Phases
 
-### Phase 1: Basic Dockerfile
-- Create working multi-stage Dockerfile
+### Phase 1: Cached Schema Setup
+- Implement cached schema system in `scripts/generate-api.js`
+- Create initial `openapi-schema.json` file
+- Test schema caching functionality
+
+### Phase 2: Basic Dockerfile
+- Create working multi-stage Dockerfile with cached schema support
 - Basic NGINX configuration
 - Verify build process and container functionality
 
-### Phase 2: Optimization and Configuration
+### Phase 3: Optimization and Configuration
 - Add .dockerignore for build optimization
 - Enhanced NGINX configuration with caching and compression
 - Environment variable support for API configuration
 
-### Phase 3: Production Readiness
+### Phase 4: Production Readiness
 - Security headers and hardening
 - Build optimization and layer caching
 - Documentation and deployment instructions
