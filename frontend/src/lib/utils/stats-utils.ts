@@ -27,33 +27,28 @@ export function calculateAvailableIPs(pools: DhcpPool[], leases: DhcpLease[]): n
   return totalAvailable
 }
 
-// Calculate leases expiring within 24 hours
-export function calculateExpiringSoon(leases: DhcpLease[]): number {
-  const now = Date.now()
-  const twentyFourHoursFromNow = now + (24 * 60 * 60 * 1000)
+// Calculate leases expiring by end of current day
+export function calculateExpiringToday(leases: DhcpLease[]): number {
+  const now = new Date()
+  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
   
   return leases.filter(lease => {
     if (!lease.is_active) return false
     
     const leaseTime = new Date(lease.lease_time).getTime()
-    return leaseTime <= twentyFourHoursFromNow && leaseTime > now
+    return leaseTime <= endOfDay.getTime() && leaseTime > now.getTime()
   }).length
 }
 
-// Calculate new devices (unique MACs) in the last 24 hours
-export function calculateNewDevices(leases: DhcpLease[]): number {
-  const now = Date.now()
-  const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000)
-  
-  // Get unique MAC addresses from leases created in the last 24 hours
-  const recentDevices = new Set<string>()
+// Calculate unique device types from all leases
+export function calculateDeviceTypes(leases: DhcpLease[]): number {
+  const uniqueVendors = new Set<string>()
   
   leases.forEach(lease => {
-    const leaseTime = new Date(lease.lease_time).getTime()
-    if (leaseTime >= twentyFourHoursAgo) {
-      recentDevices.add(lease.mac_address)
+    if (lease.vendor && lease.vendor.trim() !== '') {
+      uniqueVendors.add(lease.vendor)
     }
   })
   
-  return recentDevices.size
+  return uniqueVendors.size
 }

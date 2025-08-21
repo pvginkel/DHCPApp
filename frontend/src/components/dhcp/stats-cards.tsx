@@ -4,8 +4,8 @@ import { usePoolsQuery } from '@/lib/api/pools'
 import {
   calculateTotalLeases,
   calculateAvailableIPs,
-  calculateExpiringSoon,
-  calculateNewDevices,
+  calculateExpiringToday,
+  calculateDeviceTypes,
 } from '@/lib/utils/stats-utils'
 
 interface StatCardProps {
@@ -41,8 +41,8 @@ export function StatsCards() {
   const stats = {
     totalLeases: leases ? calculateTotalLeases(leases) : 0,
     availableIPs: (leases && pools) ? calculateAvailableIPs(pools, leases) : 0,
-    expiringSoon: leases ? calculateExpiringSoon(leases) : 0,
-    newDevices: leases ? calculateNewDevices(leases) : 0,
+    expiringToday: leases ? calculateExpiringToday(leases) : 0,
+    deviceTypes: leases ? calculateDeviceTypes(leases) : 0,
   }
   
   return (
@@ -62,16 +62,16 @@ export function StatsCards() {
         hasError={hasError || (!pools && !poolsLoading)}
       />
       <StatCard
-        title="Expiring Soon"
-        value={stats.expiringSoon}
-        description="Within 24 hours"
+        title="Expiring Today"
+        value={stats.expiringToday}
+        description="By end of day"
         isLoading={isLoading}
         hasError={hasError}
       />
       <StatCard
-        title="New Devices"
-        value={stats.newDevices}
-        description="Last 24 hours"
+        title="Device Types"
+        value={stats.deviceTypes}
+        description="Unique manufacturers"
         isLoading={isLoading}
         hasError={hasError}
       />
