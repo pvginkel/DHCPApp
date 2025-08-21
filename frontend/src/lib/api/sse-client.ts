@@ -28,6 +28,8 @@ export class SSEClient {
 
   connect(): void {
     if (this.eventSource?.readyState === EventSource.OPEN) {
+      this.updateConnectionStatus('connected');
+      this.startHeartbeatTimeout();
       return;
     }
 
