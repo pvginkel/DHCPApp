@@ -1,79 +1,137 @@
 """Flask application factory."""
 
 import logging
-from typing import Optional
-from flask import Flask
+
 from flask_cors import CORS
-from config import get_config
-from app.services.dhcp_service import DhcpService
-from app.services.sse_service import SseService
-from app.services.mac_vendor_service import MacVendorService
-from app.api.openapi import OpenApiGenerator
+
+from app.app import App
+from app.app_config import AppSettings
+from app.config import Settings
 
 
-class DHCPApp(Flask):
-    """Extended Flask app with typed service attributes."""
-    
-    sse_service: SseService
-    dhcp_service: DhcpService
-    mac_vendor_service: MacVendorService
-    openapi_generator: OpenApiGenerator
+def create_app(settings: "Settings | None" = None, app_settings: "AppSettings | None" = None, skip_background_services: bool = False) -> App:
+    """Create and configure Flask application.
 
-
-def create_app(config_name: Optional[str] = None) -> DHCPApp:
-    """Application factory function to create Flask app instance.
-    
-    Args:
-        config_name: Configuration environment name
-        
-    Returns:
-        Configured Flask application instance
+    This factory follows a hook-based pattern where app-specific behavior
+    is injected through three functions in app/startup.py:
+    - create_container(): builds the DI container with app-specific providers
+    - register_blueprints(): registers domain resource blueprints
+    - register_error_handlers(): registers app-specific error handlers
     """
-    app = DHCPApp(__name__)
-    
+    app = App(__name__)
+
     # Load configuration
-    config_instance = get_config()
-    app.config.from_object(config_instance)
-    
-    # Set up CORS for future SPA integration
-    CORS(app)
-    
-    # Configure logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    if settings is None:
+        settings = Settings.load()
+
+    # Validate configuration before proceeding
+    settings.validate_production_config()
+
+    app.config.from_object(settings.to_flask_config())
+
+    # Initialize SpecTree for OpenAPI docs
+    from app.utils.spectree_config import configure_spectree
+
+    configure_spectree(app)
+
+    # --- Hook 1: Create service container ---
+    from app.startup import create_container
+
+    # Load app-specific configuration alongside infrastructure settings
+    if app_settings is None:
+        app_settings = AppSettings.load(flask_env=settings.flask_env)
+
+    container = create_container()
+    container.config.override(settings)
+    container.app_config.override(app_settings)
+
+    # Wire container to all API modules via package scanning
+    container.wire(packages=['app.api'])
+
+    app.container = container
+
+    # Configure CORS
+    CORS(app, origins=settings.cors_origins)
+
+    # Initialize correlation ID tracking
+    from app.utils import _init_request_id
+    _init_request_id(app)
+
+    # Set up log capture handler in testing mode
+    if settings.is_testing:
+        from app.utils.log_capture import LogCaptureHandler
+        log_handler = LogCaptureHandler.get_instance()
+
+        # Set lifecycle coordinator for connection_close events
+        lifecycle_coordinator = container.lifecycle_coordinator()
+        log_handler.set_lifecycle_coordinator(lifecycle_coordinator)
+
+        # Attach to root logger
+        root_logger = logging.getLogger()
+        root_logger.addHandler(log_handler)
+        root_logger.setLevel(logging.INFO)
+
+        app.logger.info("Log capture handler initialized for testing mode")
+
+    # Register error handlers: core + business (template), then app-specific hook
+    from app.utils.flask_error_handlers import (
+        register_business_error_handlers,
+        register_core_error_handlers,
     )
-    
-    mac_vendor_service = MacVendorService(
-        update_database=app.config.get('UPDATE_MAC_VENDOR_DATABASE', True)
-    )
-    dhcp_service = DhcpService(
-        app.config['DNSMASQ_CONFIG_FILE_PATH'],
-        mac_vendor_service=mac_vendor_service
-    )
-    sse_service = SseService(dhcp_service)
-    openapi_generator = OpenApiGenerator()
-    
-    # Store services in app context for access across modules
-    app.sse_service = sse_service
-    app.dhcp_service = dhcp_service
-    app.mac_vendor_service = mac_vendor_service
-    app.openapi_generator = openapi_generator
-    
-    # Register blueprints
-    from app.api.v1 import api_v1_bp
-    app.register_blueprint(api_v1_bp, url_prefix='/api/v1')
-    
-    # Error handlers
-    @app.errorhandler(404)
-    def not_found(error):
-        """Handle 404 errors."""
-        return {'error': 'Resource not found'}, 404
-    
-    @app.errorhandler(500)
-    def internal_error(error):
-        """Handle 500 errors."""
-        app.logger.error(f'Internal server error: {error}')
-        return {'error': 'Internal server error'}, 500
-    
+
+    register_core_error_handlers(app)
+    register_business_error_handlers(app)
+
+    # --- Hook 2: App-specific error handlers ---
+    from app.startup import register_error_handlers
+
+    register_error_handlers(app)
+
+    # Register main API blueprint (includes auth hooks and auth_bp)
+    from app.api import api_bp
+
+    # --- Hook 3: App-specific blueprint registrations ---
+    from app.startup import register_blueprints
+
+    register_blueprints(api_bp, app)
+
+    app.register_blueprint(api_bp)
+
+    # Register template blueprints directly on the app (not under /api)
+    # These are for internal cluster use only and should not be publicly proxied
+    from app.api.health import health_bp
+    from app.api.metrics import metrics_bp
+
+    app.register_blueprint(health_bp)
+    app.register_blueprint(metrics_bp)
+
+    # Always register testing blueprints (runtime check handles access control)
+    from app.api.testing_logs import testing_logs_bp
+    app.register_blueprint(testing_logs_bp)
+
+    from app.api.testing_sse import testing_sse_bp
+    app.register_blueprint(testing_sse_bp)
+
+    # Register SSE Gateway callback blueprint
+    from app.api.sse import sse_bp
+    app.register_blueprint(sse_bp)
+
+    # Register testing auth endpoints (runtime check handles access control)
+    from app.api.testing_auth import testing_auth_bp
+    app.register_blueprint(testing_auth_bp)
+
+    # Start background services only when not in CLI mode
+    if not skip_background_services:
+        # Start temp file manager cleanup thread during app creation
+        temp_file_manager = container.temp_file_manager()
+        temp_file_manager.start_cleanup_thread()
+
+        # Initialize FrontendVersionService singleton to register its observer callback
+        # with SSEConnectionManager. Must happen before fire_startup().
+        container.frontend_version_service()
+
+        # Signal that application startup is complete. Services that registered
+        # for STARTUP notifications will be invoked here.
+        container.lifecycle_coordinator().fire_startup()
+
     return app

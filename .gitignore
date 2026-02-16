@@ -1,4 +1,14 @@
-__pycache__/
-.venv/
+__pycache__
 .env
-.env.*
+.env.test
+.coverage
+/tmp
+/MagicMock
+test-app/
+*.pyc
+.venv/
+dist/
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/

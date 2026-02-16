@@ -1,9 +1,0 @@
-- Tech stack: Python, Flask running on Kubernetes in production.
-- Use a Python virtual environment using the `virtualenvwrapper` tool. Call `workon dhcp-backend` before calling Python commands.
-- Track dependencies in `requirements.txt`. Don't pin their versions.
-- Use OOP.
-- Don't start the app yourself.
-- Write Python type annotations.
-- Keep .gitignore files as brief as possible.
-- Don't add code that may be useful in the future like helper methods or scaffolding. Only write code that is of use for the feature being implemented.
-- Use Python logging instead of print statements.
