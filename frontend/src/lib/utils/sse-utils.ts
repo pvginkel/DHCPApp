@@ -1,50 +1,23 @@
 import { z } from 'zod';
 import type { SSEEvent, SSEConnectionState } from '../../types/sse';
 
-const ConnectionEstablishedEventSchema = z.object({
-  event_type: z.literal('connection_established'),
-  client_id: z.string(),
-  message: z.string(),
-  active_connections: z.number(),
-});
-
 const DataChangedEventSchema = z.object({
   event_type: z.literal('data_changed'),
   timestamp: z.string(),
 });
 
-const HeartbeatEventSchema = z.object({
-  event_type: z.literal('heartbeat'),
-  timestamp: z.number(),
-  active_connections: z.number(),
-});
-
-const SSEEventSchema = z.union([
-  ConnectionEstablishedEventSchema,
-  DataChangedEventSchema,
-  HeartbeatEventSchema,
-]);
-
 export function parseSSEEventData(data: string): SSEEvent | null {
   try {
     const parsed = JSON.parse(data);
-    const result = SSEEventSchema.safeParse(parsed);
+    const result = DataChangedEventSchema.safeParse(parsed);
     return result.success ? result.data : null;
   } catch {
     return null;
   }
 }
 
-export function isConnectionEstablishedEvent(event: SSEEvent): event is SSEEvent & { event_type: 'connection_established' } {
-  return event.event_type === 'connection_established';
-}
-
 export function isDataChangedEvent(event: SSEEvent): event is SSEEvent & { event_type: 'data_changed' } {
   return event.event_type === 'data_changed';
-}
-
-export function isHeartbeatEvent(event: SSEEvent): event is SSEEvent & { event_type: 'heartbeat' } {
-  return event.event_type === 'heartbeat';
 }
 
 export function formatConnectionStatus(state: SSEConnectionState): { label: string; color: string } {

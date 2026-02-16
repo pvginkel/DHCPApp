@@ -10,13 +10,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `pnpm lint` - Run ESLint
 - `pnpm type-check` - Run TypeScript type checking
 - `pnpm generate:api` - Generate API client from OpenAPI spec (requires backend running)
-- `pnpm generate:api:prod` - Generate API client for production environment
 
 ### API Generation
-- API client is auto-generated from OpenAPI spec at backend `/api/v1/openapi.json`
+- API client is auto-generated from OpenAPI spec at backend `/api/apidoc/openapi.json`
 - Generated files are in `src/lib/api/generated/` and excluded from git
 - Always run `pnpm generate:api` before development when backend changes
-- For production builds, use `pnpm generate:api:prod`
 - **Important**: Backend only runs on IPv4 - use `curl -4` when testing endpoints manually
 
 ## Architecture Overview
@@ -105,34 +103,16 @@ src/
 ## Environment Configuration
 
 ### API Configuration
-- `VITE_API_BASE_URL` - Backend API URL (defaults to `http://localhost:5000/api/v1`)
-- **Important**: Include the full path with `/api/v1` - don't use just the host
+- The frontend always uses `/api` as the API base URL (relative path)
+- In development, Vite's proxy forwards `/api` requests to the backend (configured in `vite.config.ts`)
+- In production, NGINX proxies `/api` to the backend
 - Development server runs on port 3000 with auto-open browser
 - Build output goes to `dist/` directory
 
-### VM/Remote Development Setup
-When developing in a VM or connecting to a remote backend:
-
-1. Create a `.env.local` file:
-   ```bash
-   # Replace with your actual backend host IP
-   VITE_API_BASE_URL=http://192.168.1.100:5000/api/v1
-   ```
-
-2. Regenerate API client for the new URL:
-   ```bash
-   pnpm generate:api
-   ```
-
-3. Start development:
-   ```bash
-   pnpm dev
-   ```
-
-**Common VM setup examples:**
-- VM to host: `VITE_API_BASE_URL=http://192.168.1.100:5000/api/v1`
-- Docker compose: `VITE_API_BASE_URL=http://backend:5000/api/v1`
-- Development server: `VITE_API_BASE_URL=http://dev-server.local:5000/api/v1`
+### Backend URL for Dev Proxy and API Generation
+- `BACKEND_URL` - Backend host for Vite dev proxy and OpenAPI generation (defaults to `http://localhost:5000`)
+- `SSE_GATEWAY_URL` - SSE gateway host for Vite dev proxy (defaults to `http://localhost:3001`)
+- Set these in your environment or `.env.local` if the backend is on a different host
 
 ## Command Templates
 

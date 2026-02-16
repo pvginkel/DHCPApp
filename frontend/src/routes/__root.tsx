@@ -4,6 +4,7 @@ import { ErrorBoundary } from '@/components/common/error-boundary'
 import { Layout } from '@/components/layout/layout'
 import { useSystemTheme } from '@/hooks/use-system-theme'
 import { SSEProvider } from '@/contexts/sse-context'
+import { checkAuth } from '@/lib/api/auth'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -16,7 +17,7 @@ const queryClient = new QueryClient({
 
 function RootComponent() {
   useSystemTheme()
-  
+
   return (
     <QueryClientProvider client={queryClient}>
       <SSEProvider>
@@ -31,5 +32,8 @@ function RootComponent() {
 }
 
 export const Route = createRootRoute({
+  beforeLoad: async () => {
+    await checkAuth()
+  },
   component: RootComponent,
 })

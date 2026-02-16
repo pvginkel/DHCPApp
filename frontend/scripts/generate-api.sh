@@ -13,9 +13,9 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-BACKEND_URL=${1:-"http://localhost:5000/api/v1"}
-HEALTH_ENDPOINT="${BACKEND_URL}/health"
-OPENAPI_ENDPOINT="${BACKEND_URL}/openapi.json"
+BACKEND_URL=${1:-"http://localhost:5000"}
+HEALTH_ENDPOINT="${BACKEND_URL}/healthz"
+OPENAPI_ENDPOINT="${BACKEND_URL}/api/apidoc/openapi.json"
 
 echo -e "${BLUE}🚀 OpenAPI Code Generation${NC}"
 echo -e "${BLUE}================================${NC}"
@@ -46,10 +46,6 @@ fi
 
 # Run the generation script
 echo -e "${YELLOW}🔧 Running code generation...${NC}"
-if [[ "$1" == "--prod" ]]; then
-    node scripts/generate-api.js --prod
-else
-    node scripts/generate-api.js
-fi
+BACKEND_URL="${BACKEND_URL}" node scripts/generate-api.js
 
 echo -e "${GREEN}🎉 Code generation completed successfully!${NC}"

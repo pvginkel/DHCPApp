@@ -1,19 +1,19 @@
 // API client configuration wrapper
 import { apiClient } from './generated/client'
+import { redirectToLogin } from './auth'
 
 // Configure global defaults
 apiClient.use({
   onRequest(options) {
-    // Add any global request configuration here
-    // e.g., authentication headers, logging, etc.
     console.log('API Request:', options.schemaPath, options.params)
   }
 })
 
 apiClient.use({
   onResponse(options) {
-    // Add any global response handling here
-    // e.g., error handling, logging, etc.
+    if (options.response.status === 401) {
+      redirectToLogin()
+    }
     console.log('API Response:', options.schemaPath, options.response.status)
   }
 })

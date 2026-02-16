@@ -1,8 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { SSEClient } from '../lib/api/sse-client';
 import type { SSEEvent, SSEConnectionStatus } from '../types/sse';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+import { API_BASE_URL } from '../lib/api/config';
 
 export interface UseSSEConnectionOptions {
   onEvent?: (event: SSEEvent) => void;
@@ -50,7 +49,7 @@ export function useSSEConnection(options: UseSSEConnectionOptions = {}): UseSSEC
   const connect = useCallback(() => {
     if (!clientRef.current) {
       clientRef.current = new SSEClient({
-        url: `${API_BASE_URL}/leases/stream`,
+        url: `${API_BASE_URL}/sse/stream?request_id=${Math.random().toString(36).slice(2)}`,
         onConnectionChange: handleConnectionChange,
         onEvent: handleEvent,
         onError: handleError,

@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
 
+const backendProxyTarget = process.env.BACKEND_URL || 'http://localhost:5000'
+const gatewayProxyTarget = process.env.SSE_GATEWAY_URL || 'http://localhost:3001'
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), TanStackRouterVite()],
@@ -19,7 +22,25 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    allowedHosts: true,
     host: true,
     open: true,
+    proxy: {
+      '/api/sse': {
+        target: gatewayProxyTarget,
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api': {
+        target: backendProxyTarget,
+        changeOrigin: true,
+        secure: false,
+      }
+    },
+    watch: process.env.VITE_TEST_MODE === 'true'
+      ? {
+          ignored: ['**']
+        }
+      : undefined
   },
 })

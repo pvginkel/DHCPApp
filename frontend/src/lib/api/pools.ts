@@ -1,16 +1,21 @@
 // Pool API client functions
 import { useQuery, type UseQueryOptions } from '@tanstack/react-query'
 import { API_BASE_URL } from './config'
+import { redirectToLogin } from './auth'
 import type { DhcpPool } from '@/types/pools'
 
 // Manual API client for /pools endpoint (not in OpenAPI spec yet)
 export async function fetchPools(): Promise<DhcpPool[]> {
-  const response = await fetch(`${API_BASE_URL}/pools`)
-  
+  const response = await fetch(`${API_BASE_URL}/dhcp/pools`)
+
+  if (response.status === 401) {
+    redirectToLogin()
+  }
+
   if (!response.ok) {
     throw new Error(`Failed to fetch pools: ${response.status} ${response.statusText}`)
   }
-  
+
   return response.json()
 }
 

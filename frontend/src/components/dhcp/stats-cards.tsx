@@ -1,5 +1,5 @@
 // Stats cards component with real-time data
-import { useLeasesQuery } from '@/lib/api/generated/queries'
+import { useDhcpLeasesQuery } from '@/lib/api/generated/queries'
 import { usePoolsQuery } from '@/lib/api/pools'
 import {
   calculateTotalLeases,
@@ -31,7 +31,7 @@ function StatCard({ title, value, description, isLoading, hasError }: StatCardPr
 }
 
 export function StatsCards() {
-  const { data: leases, isLoading: leasesLoading, error: leasesError } = useLeasesQuery()
+  const { data: leases, isLoading: leasesLoading, error: leasesError } = useDhcpLeasesQuery()
   const { data: pools, isLoading: poolsLoading, error: poolsError } = usePoolsQuery()
   
   const isLoading = leasesLoading || poolsLoading

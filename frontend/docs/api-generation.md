@@ -8,9 +8,6 @@ This project automatically generates TypeScript types, API clients, and TanStack
 # Generate API code from local backend
 pnpm generate:api
 
-# Generate API code from production backend  
-pnpm generate:api:prod
-
 # Generate API code and restart dev server
 pnpm update:api
 
@@ -80,11 +77,10 @@ function MyComponent() {
 
 ## Configuration
 
-Set the backend URL via environment variables:
+Set the backend URL via environment variable:
 
 ```bash
-# .env.local
-VITE_API_BASE_URL=http://localhost:5000/api/v1
+BACKEND_URL=http://localhost:5000
 ```
 
 ## Troubleshooting
@@ -100,8 +96,8 @@ python3 run.py
 
 ### Generation Fails
 
-1. Check backend health: `curl http://localhost:5000/api/v1/health`
-2. Verify OpenAPI spec: `curl http://localhost:5000/api/v1/openapi.json`
+1. Check backend health: `curl http://localhost:5000/healthz`
+2. Verify OpenAPI spec: `curl http://localhost:5000/api/apidoc/openapi.json`
 3. Check console output for specific error messages
 
 ### Type Errors

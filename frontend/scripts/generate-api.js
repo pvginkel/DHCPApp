@@ -9,13 +9,10 @@ const projectRoot = join(__dirname, '..')
 const generatedDir = join(projectRoot, 'src', 'lib', 'api', 'generated')
 
 // Configuration
-const isProd = process.argv.includes('--prod')
 const useCachedSchema = process.env.USE_CACHED_SCHEMA === 'true'
-const baseUrl = isProd 
-  ? process.env.VITE_API_BASE_URL || 'https://your-prod-domain.com/api/v1'
-  : process.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1'
+const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000'
 
-const openApiUrl = `${baseUrl}/openapi.json`
+const openApiUrl = `${backendUrl}/api/apidoc/openapi.json`
 const cachedSchemaPath = join(projectRoot, 'openapi-schema.json')
 
 /**
@@ -76,8 +73,8 @@ async function fetchOpenApiSpec(url) {
       console.error(`
 🔧 Troubleshooting:
    1. Make sure the backend is running: workon dhcp-backend && python3 run.py
-   2. Verify the backend is accessible at: ${baseUrl}
-   3. Check the health endpoint: ${baseUrl}/health
+   2. Verify the backend is accessible at: ${backendUrl}
+   3. Check the health endpoint: ${backendUrl}/healthz
       `)
     }
     
@@ -145,10 +142,20 @@ function generateQueryHooks(spec, outputPath) {
   
   const paths = spec.paths || {}
   const hooks = []
-  
+
+  // Check if any mutations exist to determine imports
+  const hasMutations = Object.values(paths).some(methods =>
+    Object.keys(methods).some(method => method !== 'get')
+  )
+
   // Generate imports
+  const queryImports = ['useQuery', 'type UseQueryOptions']
+  if (hasMutations) {
+    queryImports.push('useMutation', 'type UseMutationOptions')
+  }
+
   hooks.push(`// Generated TanStack Query hooks - Do not edit manually
-import { useQuery, useMutation, type UseQueryOptions, type UseMutationOptions } from '@tanstack/react-query'
+import { ${queryImports.join(', ')} } from '@tanstack/react-query'
 import { apiClient } from './client'
 import type { paths } from './types'
 
@@ -347,7 +354,7 @@ export * from './generated/client'
 async function generateApiCode() {
   try {
     console.log('🚀 Starting OpenAPI code generation...')
-    console.log(`📍 Environment: ${isProd ? 'Production' : 'Development'}`)
+    console.log(`📍 Backend URL: ${backendUrl}`)
     console.log(`📁 Use cached schema: ${useCachedSchema}`)
     
     // Ensure output directory exists
@@ -399,7 +406,11 @@ async function generateApiCode() {
     createTypeReExports(typesReExportPath)
     
     const clientWrapperPath = join(apiDir, 'client.ts')
-    createClientWrapper(clientWrapperPath)
+    if (!existsSync(clientWrapperPath)) {
+      createClientWrapper(clientWrapperPath)
+    } else {
+      console.log(`⏭️  Skipping client wrapper (already exists): ${clientWrapperPath}`)
+    }
     
     console.log('\n🎉 OpenAPI code generation completed successfully!')
     console.log(`

@@ -102,50 +102,6 @@
           "error"
         ],
         "type": "object"
-      },
-      "SseConnectionEstablished": {
-        "properties": {
-          "active_connections": {
-            "description": "Number of currently active SSE connections",
-            "example": 1,
-            "type": "integer"
-          },
-          "client_id": {
-            "description": "Unique identifier for this SSE client connection",
-            "example": "client_abc123def456",
-            "type": "string"
-          },
-          "message": {
-            "description": "Connection confirmation message",
-            "example": "Successfully connected to lease updates stream",
-            "type": "string"
-          }
-        },
-        "required": [
-          "active_connections",
-          "client_id",
-          "message"
-        ],
-        "type": "object"
-      },
-      "SseHeartbeat": {
-        "properties": {
-          "active_connections": {
-            "description": "Number of currently active SSE connections",
-            "example": 2,
-            "type": "integer"
-          },
-          "timestamp": {
-            "description": "Unix timestamp when heartbeat was sent",
-            "example": 1705324200.123,
-            "type": "number"
-          }
-        },
-        "required": [
-          "active_connections",
-          "timestamp"
-        ],
-        "type": "object"
       }
     }
   },
@@ -162,93 +118,7 @@
   },
   "openapi": "3.0.2",
   "paths": {
-    "/health": {
-      "get": {
-        "description": "Check if the DHCP monitoring service is running and healthy",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "service": {
-                      "example": "DHCP Backend API",
-                      "type": "string"
-                    },
-                    "status": {
-                      "example": "healthy",
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Service is healthy"
-          }
-        },
-        "summary": "Health check endpoint",
-        "tags": [
-          "Health"
-        ]
-      }
-    },
-    "/internal/notify-lease-change": {
-      "post": {
-        "description": "Internal endpoint called by companion containers to notify the API of DHCP lease file changes. Triggers re-reading of lease files and broadcasts changes to SSE clients.",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "active_connections": {
-                      "example": 2,
-                      "type": "integer"
-                    },
-                    "message": {
-                      "example": "Lease change notification processed successfully",
-                      "type": "string"
-                    },
-                    "status": {
-                      "example": "success",
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Notification processed successfully"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "message": {
-                      "example": "Failed to process lease change notification: error details",
-                      "type": "string"
-                    },
-                    "status": {
-                      "example": "error",
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Error processing notification"
-          }
-        },
-        "summary": "Internal lease change notification",
-        "tags": [
-          "Internal"
-        ]
-      }
-    },
-    "/leases": {
+    "/dhcp/leases": {
       "get": {
         "description": "Retrieve all DHCP lease information from dnsmasq lease files. Returns both active and expired leases with static/dynamic classification.",
         "responses": {
@@ -281,94 +151,12 @@
           "DHCP Leases"
         ]
       }
-    },
-    "/leases/stream": {
-      "get": {
-        "description": "Establish a Server-Sent Events (SSE) connection to receive real-time notifications when DHCP lease data changes. Events include simple change notifications and periodic heartbeats. Frontend should reload lease data via the REST API when change notifications are received.",
-        "responses": {
-          "200": {
-            "content": {
-              "text/event-stream": {
-                "schema": {
-                  "description": "Server-Sent Events stream with the following event types:\\n- connection_established: Initial connection confirmation\\n- data_changed: Simple notification that lease data has changed\\n- heartbeat: Periodic keep-alive message",
-                  "examples": {
-                    "connection_established": {
-                      "value": "event: connection_established\\ndata: {\"client_id\": \"client_abc123\", \"message\": \"Successfully connected\", \"active_connections\": 1}\\n\\n"
-                    },
-                    "data_changed": {
-                      "value": "event: data_changed\\ndata: {\"event_type\": \"data_changed\", \"timestamp\": \"2024-01-15T14:30:00Z\"}\\n\\n"
-                    },
-                    "heartbeat": {
-                      "value": "event: heartbeat\\ndata: {\"timestamp\": 1705324200.123, \"active_connections\": 2}\\n\\n"
-                    }
-                  },
-                  "type": "string"
-                }
-              }
-            },
-            "description": "SSE stream established successfully",
-            "headers": {
-              "Cache-Control": {
-                "description": "no-cache",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Connection": {
-                "description": "keep-alive",
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Server-Sent Events stream for lease updates",
-        "tags": [
-          "Real-time Updates"
-        ]
-      }
-    },
-    "/status": {
-      "get": {
-        "description": "Get basic status information about the DHCP monitoring service",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "api_version": {
-                      "example": "v1",
-                      "type": "string"
-                    },
-                    "description": {
-                      "example": "DHCP Network Management API",
-                      "type": "string"
-                    },
-                    "version": {
-                      "example": "1.0.0",
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Service status information"
-          }
-        },
-        "summary": "Service status information",
-        "tags": [
-          "System"
-        ]
-      }
     }
   },
   "servers": [
     {
-      "description": "API Version 1",
-      "url": "/api/v1"
+      "description": "API",
+      "url": "/api"
     }
   ]
 }

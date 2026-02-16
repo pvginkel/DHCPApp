@@ -1,4 +1,4 @@
-import { useLeasesQuery } from '@/lib/api/generated/queries'
+import { useDhcpLeasesQuery } from '@/lib/api/generated/queries'
 import { LoadingSpinner } from '@/components/common/loading-spinner'
 import { 
   Table, 
@@ -44,7 +44,7 @@ export function LeaseTable() {
   
   const { connectionStatus } = useSSEContext()
 
-  const { data: rawLeases, isLoading, error } = useLeasesQuery()
+  const { data: rawLeases, isLoading, error } = useDhcpLeasesQuery()
   
   useEffect(() => {
     // If no new data, skip

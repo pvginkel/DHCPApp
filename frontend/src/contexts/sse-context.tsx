@@ -22,8 +22,8 @@ export function SSEProvider({ children }: SSEProviderProps) {
 
   const handleSSEEvent = useCallback((event: SSEEvent) => {
     if (isDataChangedEvent(event)) {
-      queryClient.invalidateQueries({ queryKey: [...apiKeys.all, 'leases'] });
-      queryClient.invalidateQueries({ queryKey: [...apiKeys.all, 'status'] });
+      queryClient.invalidateQueries({ queryKey: [...apiKeys.all, 'dhcp_leases'] });
+      queryClient.invalidateQueries({ queryKey: [...apiKeys.all, 'pools'] });
     }
   }, [queryClient]);
 
