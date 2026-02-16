@@ -1,54 +1,26 @@
-"""Utilities package for essential utilities."""
+"""Utility functions and helpers."""
 
-import logging
-from typing import Any, Dict, Optional
+import uuid
 
-
-class Logger:
-    """Utility class for logging operations."""
-    
-    @staticmethod
-    def get_logger(name: str) -> logging.Logger:
-        """Get logger instance.
-        
-        Args:
-            name: Logger name
-            
-        Returns:
-            Logger instance
-        """
-        return logging.getLogger(name)
+from flask import g, has_request_context, request
 
 
-class ResponseHelper:
-    """Utility class for API response formatting following REST principles."""
-    
-    @staticmethod
-    def success_response(data: Any) -> Any:
-        """Create success response with direct data return.
-        
-        Args:
-            data: Response data to return directly
-            
-        Returns:
-            Data directly without wrapper attributes
-        """
-        return data
-    
-    @staticmethod
-    def error_response(message: str, details: Optional[str] = None) -> Dict[str, Any]:
-        """Create structured error response.
-        
-        Args:
-            message: Error message
-            details: Optional error details
-            
-        Returns:
-            Structured error object
-        """
-        response = {
-            'error': message
-        }
-        if details:
-            response['details'] = details
-        return response
+def get_current_correlation_id() -> str | None:
+    """Get the current request's correlation ID."""
+    if not has_request_context():
+        return None
+    return getattr(g, "correlation_id", None)
+
+
+def _init_request_id(app):  # type: ignore[no-untyped-def]
+    """Register before_request handler to set correlation ID."""
+
+    @app.before_request
+    def set_request_id() -> None:
+        g.correlation_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+
+
+def ensure_request_id_from_query(request_id: str | None) -> None:
+    """Set correlation ID from query parameter for SSE streams."""
+    if request_id and has_request_context():
+        g.correlation_id = request_id
