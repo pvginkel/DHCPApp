@@ -3,6 +3,7 @@
 Hook points called by create_app():
   - create_container()
   - register_blueprints()
+  - register_root_blueprints()
   - register_error_handlers()
 
 Hook points called by CLI command handlers:
@@ -32,8 +33,9 @@ def register_blueprints(api_bp: Blueprint, app: Flask) -> None:
 
         api_bp.register_blueprint(dhcp_bp)
 
-    # Register internal notification endpoint directly on app
-    # (outside /api prefix, so OIDC does not apply)
+
+def register_root_blueprints(app: Flask) -> None:
+    """Register app-specific blueprints directly on the app (not under /api prefix)."""
     from app.api.internal import internal_bp
 
     app.register_blueprint(internal_bp)
