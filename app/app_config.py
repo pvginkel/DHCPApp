@@ -23,7 +23,7 @@ class AppEnvironment(BaseSettings):
     )
 
     DNSMASQ_CONFIG_FILE_PATH: str = "/etc/dnsmasq.conf"
-    ROOT_PATH: str = ""
+    ROOT_PATH: str = str(_PROJECT_ROOT)
     UPDATE_MAC_VENDOR_DATABASE: bool = True
     DEV_FAKE_LEASE_CHANGES: bool = False
 
