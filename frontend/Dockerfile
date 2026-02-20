@@ -16,17 +16,16 @@ RUN pnpm install --frozen-lockfile
 # Copy source code, configuration files, and cached OpenAPI schema
 COPY . .
 
-# Set environment flag to use cached schema for API generation
-ENV USE_CACHED_SCHEMA=true
-
 # Build the application (uses cached schema)
 RUN pnpm build
 
 # Production stage with NGINX
 FROM nginx:alpine AS production
 
-# Copy custom NGINX configuration
+# Copy custom NGINX configuration and proxy snippet
 COPY nginx.conf /etc/nginx/nginx.conf
+RUN mkdir -p /etc/nginx/snippets
+COPY snippets/proxy.conf /etc/nginx/snippets/proxy.conf
 
 # Copy built static assets from build stage
 COPY --from=build /app/dist /usr/share/nginx/html

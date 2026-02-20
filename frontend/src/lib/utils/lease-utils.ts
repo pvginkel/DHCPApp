@@ -6,14 +6,14 @@ export function formatLeaseExpiration(leaseTime: string): string {
   const date = new Date(leaseTime)
   const now = new Date()
   const diffMs = date.getTime() - now.getTime()
-  
+
   if (diffMs <= 0) {
     return 'Expired'
   }
-  
+
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
   const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
-  
+
   if (diffHours >= 24) {
     const diffDays = Math.floor(diffHours / 24)
     return `${diffDays}d ${diffHours % 24}h`

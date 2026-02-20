@@ -1,437 +1,515 @@
 #!/usr/bin/env node
-import { execSync } from 'child_process'
-import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'fs'
-import { join, dirname } from 'path'
-import { fileURLToPath } from 'url'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const projectRoot = join(__dirname, '..')
-const generatedDir = join(projectRoot, 'src', 'lib', 'api', 'generated')
+import { execSync } from 'child_process';
+import { writeFileSync, mkdirSync } from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { fetchAndCache } from './fetch-openapi.js';
 
-// Configuration
-const useCachedSchema = process.env.USE_CACHED_SCHEMA === 'true'
-const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000'
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-const openApiUrl = `${backendUrl}/api/apidoc/openapi.json`
-const cachedSchemaPath = join(projectRoot, 'openapi-schema.json')
+const OUTPUT_DIR = path.join(__dirname, '../src/lib/api/generated');
+const TYPES_FILE = path.join(OUTPUT_DIR, 'types.ts');
+const CLIENT_FILE = path.join(OUTPUT_DIR, 'client.ts');
+const HOOKS_FILE = path.join(OUTPUT_DIR, 'hooks.ts');
 
 /**
- * Loads OpenAPI specification from cached schema file
- * @returns {object} The cached OpenAPI specification object
+ * Ensures output directory exists
  */
-function loadCachedSchema() {
-  console.log(`📁 Loading cached OpenAPI schema from: ${cachedSchemaPath}`)
-  
+function ensureOutputDir() {
   try {
-    if (!existsSync(cachedSchemaPath)) {
-      throw new Error(`Cached schema file not found at: ${cachedSchemaPath}`)
-    }
-    
-    const schemaContent = readFileSync(cachedSchemaPath, 'utf-8')
-    const spec = JSON.parse(schemaContent)
-    
-    // Basic validation
-    if (!spec.openapi || !spec.paths || !spec.components) {
-      throw new Error('Invalid cached OpenAPI specification: missing required fields')
-    }
-    
-    console.log(`✅ Successfully loaded cached OpenAPI spec (version: ${spec.openapi || 'unknown'})`)
-    return spec
+    mkdirSync(OUTPUT_DIR, { recursive: true });
   } catch (error) {
-    console.error(`❌ Failed to load cached schema:`, error.message)
-    throw error
+    // Directory might already exist, ignore error
   }
 }
 
 /**
- * Fetches OpenAPI specification from the backend
- * @param {string} url - The OpenAPI specification URL
- * @returns {Promise<object>} The OpenAPI specification object
+ * Generates TypeScript types from OpenAPI spec
  */
-async function fetchOpenApiSpec(url) {
-  console.log(`📡 Fetching OpenAPI specification from: ${url}`)
-  
+function generateTypes() {
+  console.log('🔄 Generating TypeScript types...');
+
+  // Write spec to temporary file for openapi-typescript
+  const specFile = path.join(__dirname, '..', 'openapi-cache', 'openapi.json');
+
   try {
-    const response = await fetch(url)
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-    }
-    
-    const spec = await response.json()
-    console.log(`✅ Successfully fetched OpenAPI spec (version: ${spec.openapi || 'unknown'})`)
-    
-    // Basic validation
-    if (!spec.openapi || !spec.paths || !spec.components) {
-      throw new Error('Invalid OpenAPI specification: missing required fields')
-    }
-    
-    return spec
+    // Run openapi-typescript to generate types
+    execSync(`npx openapi-typescript ${specFile} --output ${TYPES_FILE}`, {
+      stdio: 'inherit'
+    });
+
+    console.log('✅ TypeScript types generated');
   } catch (error) {
-    console.error(`❌ Failed to fetch OpenAPI specification:`, error.message)
-    
-    if (error.message.includes('fetch')) {
-      console.error(`
-🔧 Troubleshooting:
-   1. Make sure the backend is running: workon dhcp-backend && python3 run.py
-   2. Verify the backend is accessible at: ${backendUrl}
-   3. Check the health endpoint: ${backendUrl}/healthz
-      `)
-    }
-    
-    throw error
+    throw new Error(`Failed to generate TypeScript types: ${error.message}`);
   }
 }
 
 /**
- * Generates TypeScript types from OpenAPI specification
- * @param {string} specPath - Path to the OpenAPI spec file
- * @param {string} outputPath - Path for generated types
+ * Generates openapi-fetch client with auth middleware
  */
-function generateTypes(specPath, outputPath) {
-  console.log('🔧 Generating TypeScript types...')
-  
-  try {
-    const cmd = `npx openapi-typescript "${specPath}" --output "${outputPath}"`
-    execSync(cmd, { stdio: 'pipe' })
-    console.log(`✅ Generated types: ${outputPath}`)
-  } catch (error) {
-    console.error(`❌ Failed to generate types:`, error.message)
-    throw error
-  }
-}
+function generateClient() {
+  console.log('🔄 Generating API client...');
 
-/**
- * Generates API client using openapi-fetch
- * @param {string} outputPath - Path for generated client
- */
-function generateClient(outputPath) {
-  console.log('🔧 Generating API client...')
-  
-  // Create a basic fetch client wrapper
-  const clientCode = `// Generated API client - Do not edit manually
-import createClient from 'openapi-fetch'
-import { API_BASE_URL } from '../config'
-import type { paths } from './types'
+  const clientContent = `// Generated API client - do not edit manually
+import createClient, { type Middleware } from 'openapi-fetch';
+import type { paths } from './types';
+import { buildLoginUrl } from '@/lib/auth-redirect';
 
-// Create the base client
-export const apiClient = createClient<paths>({
-  baseUrl: API_BASE_URL,
-})
+// Middleware to intercept 401 responses and redirect to login
+const authMiddleware: Middleware = {
+  async onResponse({ response }) {
+    if (response.status === 401) {
+      // Redirect to login, preserving the current URL
+      window.location.href = buildLoginUrl();
+    }
+    return response;
+  },
+};
+
+// Create the main API client
+export const api = createClient<paths>({
+  baseUrl: '',
+});
+
+// Register auth middleware
+api.use(authMiddleware);
 
 // Export types for convenience
-export type { paths } from './types'
-export type ApiClient = typeof apiClient
-`
+export type * from './types';
+`;
 
-  try {
-    writeFileSync(outputPath, clientCode, 'utf-8')
-    console.log(`✅ Generated client: ${outputPath}`)
-  } catch (error) {
-    console.error(`❌ Failed to generate client:`, error.message)
-    throw error
-  }
+  writeFileSync(CLIENT_FILE, clientContent);
+  console.log('✅ API client generated');
 }
 
 /**
- * Generates TanStack Query hooks for API endpoints
- * @param {object} spec - The OpenAPI specification
- * @param {string} outputPath - Path for generated hooks
+ * Generates TanStack Query hooks from OpenAPI spec
  */
-function generateQueryHooks(spec, outputPath) {
-  console.log('🔧 Generating TanStack Query hooks...')
-  
-  const paths = spec.paths || {}
-  const hooks = []
+function generateHooks(spec) {
+  console.log('🔄 Generating TanStack Query hooks...');
 
-  // Check if any mutations exist to determine imports
-  const hasMutations = Object.values(paths).some(methods =>
-    Object.keys(methods).some(method => method !== 'get')
-  )
+  const hooks = [];
+  const imports = new Set(['useQuery', 'useMutation', 'useQueryClient']);
 
-  // Generate imports
-  const queryImports = ['useQuery', 'type UseQueryOptions']
-  if (hasMutations) {
-    queryImports.push('useMutation', 'type UseMutationOptions')
+  // Generate type aliases from schema titles
+  const { typeAliases, typeMap, parameterTypeMap } = generateTypeAliases(spec);
+
+  // Process each path in the OpenAPI spec
+  for (const [path, pathItem] of Object.entries(spec.paths || {})) {
+    for (const [method, operation] of Object.entries(pathItem)) {
+      if (!operation.operationId) continue;
+
+      const operationId = operation.operationId;
+      const summary = operation.summary || '';
+      const isQuery = method.toLowerCase() === 'get';
+      const isMutation = ['post', 'put', 'patch', 'delete'].includes(method.toLowerCase());
+
+      if (isQuery) {
+        hooks.push(generateQueryHook(path, method, operation, operationId, summary, spec, typeMap, parameterTypeMap));
+      } else if (isMutation) {
+        hooks.push(generateMutationHook(path, method, operation, operationId, summary, spec, typeMap, parameterTypeMap));
+      }
+    }
   }
 
-  hooks.push(`// Generated TanStack Query hooks - Do not edit manually
-import { ${queryImports.join(', ')} } from '@tanstack/react-query'
-import { apiClient } from './client'
-import type { paths } from './types'
+  const hooksContent = `// Generated TanStack Query hooks - do not edit manually
+import { ${Array.from(imports).join(', ')} } from '@tanstack/react-query';
+import { toApiError } from '@/lib/api/api-error';
+import { api } from './client';
+import type { paths, components } from './types';
 
-// Query key factory
-export const apiKeys = {
-  all: ['api'] as const,
-  lists: () => [...apiKeys.all, 'list'] as const,
-  list: (filters: string) => [...apiKeys.lists(), { filters }] as const,
-  details: () => [...apiKeys.all, 'detail'] as const,
-  detail: (id: string) => [...apiKeys.details(), id] as const,
-} as const
-`)
+// Type aliases for better developer experience
+${typeAliases.join('\n')}
 
-  // Generate hooks for each endpoint
-  Object.entries(paths).forEach(([path, methods]) => {
-    Object.entries(methods).forEach(([method, operation]) => {
-      if (!operation || typeof operation !== 'object') return
-      
-      const hookName = generateHookName(method, path)
-      
-      // Check if this is an SSE endpoint
-      const isSSE = operation.responses?.['200']?.content?.['text/event-stream']
-      
-      if (method === 'get') {
-        if (!isSSE) {
-          // Generate regular query hook with endpoint-specific query key and proper typing
-          const pathKey = path.replace(/[{}\/]/g, '_').replace(/^_+|_+$/g, '')
-          const responseType = `paths['${path}']['${method}']['responses']['200']['content']['application/json']`
-          hooks.push(`
-export function ${hookName}(
-  params?: paths['${path}']['${method}']['parameters'],
-  options?: Omit<UseQueryOptions<${responseType}, Error>, 'queryKey' | 'queryFn'>
-) {
-  return useQuery<${responseType}, Error>({
-    queryKey: [...apiKeys.all, '${pathKey}', params] as const,
+${hooks.join('\n\n')}
+`;
+
+  writeFileSync(HOOKS_FILE, hooksContent);
+  console.log('✅ TanStack Query hooks generated');
+}
+
+/**
+ * Generates a React Query hook for GET requests
+ */
+function generateQueryHook(path, method, operation, operationId, summary, spec, typeMap, parameterTypeMap) {
+  const transformedOperationId = transformOperationId(operationId);
+  const hookName = `use${capitalize(transformedOperationId)}`;
+  const pathParams = extractPathParams(path);
+  const hasParams = pathParams.length > 0 || (operation.parameters && operation.parameters.length > 0);
+
+  // Assume all endpoints support query parameters
+  const supportsQueryParams = true;
+
+  let paramsType = 'void';
+  let paramsArg = '';
+  let pathWithParams = `'${path}' as const`;
+  let queryOptions = '';
+
+  if (hasParams || supportsQueryParams) {
+    if (hasParams && supportsQueryParams) {
+      // Has both path/formal params AND supports runtime query params
+      paramsType = 'any';
+    } else if (hasParams) {
+      const parameterTypeAlias = parameterTypeMap.get(`${path}:${method}`);
+      paramsType = parameterTypeAlias || `paths['${path}']['${method}']['parameters']`;
+    } else if (supportsQueryParams) {
+      // For endpoints that support query params but don't have them in the spec
+      paramsType = 'any';
+    }
+
+    paramsArg = `params?: ${paramsType}`;
+
+    if (pathParams.length > 0) {
+      pathWithParams = `'${path}'`;
+    }
+
+    queryOptions = ', { params }';
+  }
+
+  const optionsType = (hasParams || supportsQueryParams)
+    ? `Omit<Parameters<typeof useQuery>[0], 'queryKey' | 'queryFn'>`
+    : `Omit<Parameters<typeof useQuery>[0], 'queryKey' | 'queryFn'>`;
+
+  const responseType = getFriendlyType(spec, path, method, 'response', typeMap);
+
+  return `/**
+ * ${summary || `${method.toUpperCase()} ${path}`}
+ */
+export function ${hookName}(${paramsArg}${(hasParams || supportsQueryParams) ? ', ' : ''}options?: ${optionsType}): ReturnType<typeof useQuery<${responseType}>> {
+  // @ts-ignore
+  return useQuery({
+    queryKey: ['${transformedOperationId}'${(hasParams || supportsQueryParams) ? ', params' : ''}],
     queryFn: async () => {
-      const { data, error } = await apiClient.GET('${path}', params)
-      if (error) throw error
-      return data as ${responseType}
+      const result = await api.${method.toUpperCase()}(${pathWithParams}${queryOptions}) as { data?: unknown; error?: unknown; response: Response };
+      if (result.error) throw toApiError(result.error, result.response.status);
+      return result.data;
     },
-    ...options,
-  })
-}`)
-        }
+    ...options
+  });
+}`;
+}
+
+/**
+ * Generates a React Query mutation hook for POST/PUT/PATCH/DELETE requests
+ */
+function generateMutationHook(path, method, operation, operationId, summary, spec, typeMap, parameterTypeMap) {
+  const transformedOperationId = transformOperationId(operationId);
+  const hookName = `use${capitalize(transformedOperationId)}`;
+  const pathParams = extractPathParams(path);
+  const hasBody = operation.requestBody;
+  const hasPathParams = pathParams.length > 0;
+  // Check for query parameters in the operation
+  const hasQueryParams = operation.parameters && operation.parameters.some(p => p.in === 'query');
+
+  let variablesType = 'void';
+  let pathWithParams = `'${path}' as const`;
+  let mutationArgs = '';
+
+  if (hasPathParams || hasBody || hasQueryParams) {
+    const parts = [];
+    if (hasPathParams) {
+      const parameterTypeAlias = parameterTypeMap.get(`${path}:${method}`);
+      if (parameterTypeAlias) {
+        parts.push(`path: ${parameterTypeAlias}['path']`);
       } else {
-        // Generate mutation hook
-        const hasRequestBody = operation.requestBody && operation.requestBody.content
-        
-        if (hasRequestBody) {
-          hooks.push(`
-export function ${hookName}(
-  options?: UseMutationOptions<
-    paths['${path}']['${method}']['responses']['200']['content']['application/json'],
-    Error,
-    paths['${path}']['${method}']['requestBody']['content']['application/json']
-  >
-) {
+        parts.push(`path: paths['${path}']['${method}']['parameters']['path']`);
+      }
+    }
+    if (hasQueryParams) {
+      const parameterTypeAlias = parameterTypeMap.get(`${path}:${method}`);
+      if (parameterTypeAlias) {
+        parts.push(`query: ${parameterTypeAlias}['query']`);
+      } else {
+        parts.push(`query: paths['${path}']['${method}']['parameters']['query']`);
+      }
+    }
+    if (hasBody) {
+      const bodyType = getFriendlyType(spec, path, method, 'requestBody', typeMap);
+      parts.push(`body: ${bodyType}`);
+    }
+    variablesType = `{ ${parts.join('; ')} }`;
+
+    if (hasPathParams) {
+      pathWithParams = `'${path}'`;
+    }
+
+    // Build mutation arguments
+    const argParts = [];
+    if (hasPathParams || hasQueryParams) {
+      const paramParts = [];
+      if (hasPathParams) paramParts.push('path: variables.path');
+      if (hasQueryParams) paramParts.push('query: variables.query');
+      argParts.push(`params: { ${paramParts.join(', ')} }`);
+    }
+    if (hasBody) {
+      argParts.push('body: variables.body');
+    }
+    mutationArgs = argParts.length > 0 ? `, { ${argParts.join(', ')} }` : '';
+  }
+
+  const responseType = getFriendlyType(spec, path, method, 'response', typeMap);
+
+  return `/**
+ * ${summary || `${method.toUpperCase()} ${path}`}
+ */
+export function ${hookName}(options?: Omit<Parameters<typeof useMutation>[0], 'mutationFn'>): ReturnType<typeof useMutation<${responseType}, Error, ${variablesType}>> {
+  const queryClient = useQueryClient();
+
+  // @ts-ignore
   return useMutation({
-    mutationFn: async (data) => {
-      const { data: response, error } = await apiClient.${method.toUpperCase()}('${path}', {
-        body: data,
-      })
-      if (error) throw error
-      return response
+    mutationFn: async (${(variablesType == 'void' ? '' : 'variables: ' + variablesType)}) => {
+      const result = await api.${method.toUpperCase()}(${pathWithParams}${mutationArgs}) as { data?: unknown; error?: unknown; response: Response };
+      if (result.error) throw toApiError(result.error, result.response.status);
+      return result.data;
     },
-    ...options,
-  })
-}`)
-        } else {
-          hooks.push(`
-export function ${hookName}(
-  options?: UseMutationOptions<
-    paths['${path}']['${method}']['responses']['200']['content']['application/json'],
-    Error,
-    void
-  >
-) {
-  return useMutation({
-    mutationFn: async () => {
-      const { data: response, error } = await apiClient.${method.toUpperCase()}('${path}')
-      if (error) throw error
-      return response
+    onSuccess: () => {
+      // Invalidate relevant queries after successful mutation
+      queryClient.invalidateQueries();
     },
-    ...options,
-  })
-}`)
+    ...options
+  });
+}`;
+}
+
+/**
+ * Extracts path parameters from an OpenAPI path
+ */
+function extractPathParams(path) {
+  const matches = path.match(/\{([^}]+)\}/g);
+  return matches ? matches.map(match => match.slice(1, -1)) : [];
+}
+
+/**
+ * Capitalizes the first letter of a string
+ */
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+/**
+ * Extracts parameter names from operationId
+ */
+function extractParameters(operationId) {
+  const matches = operationId.match(/\{([^}]+)\}/g);
+  return matches ? matches.map(match => match.slice(1, -1)) : [];
+}
+
+/**
+ * Converts underscore-separated strings to camelCase
+ */
+function toCamelCase(str) {
+  return str.replace(/_([a-z0-9])/g, (_, letter) => letter.toUpperCase());
+}
+
+/**
+ * Transforms operationId using custom naming pattern
+ */
+function transformOperationId(operationId) {
+  // Extract parameters
+  const parameters = extractParameters(operationId);
+
+  // Replace parameter patterns with single underscore and remove __api
+  let baseName = operationId.replace(/\{[^}]+\}/g, '_');
+  baseName = baseName.replace(/__api/g, '');
+
+  // Replace hyphens and dots with underscores
+  baseName = baseName.replace(/[-\.]/g, '_');
+
+  // Clean up multiple consecutive underscores
+  baseName = baseName.replace(/_+/g, '_');
+  baseName = baseName.replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+
+  // Create parameter suffix if parameters exist
+  let parameterSuffix = '';
+  if (parameters.length > 0) {
+    parameterSuffix = '_by_' + parameters.join('_and_');
+  }
+
+  // Concatenate base name + parameter suffix
+  const fullName = baseName + parameterSuffix;
+
+  // Convert to camelCase
+  return toCamelCase(fullName);
+}
+
+/**
+ * Generates user-friendly type aliases from OpenAPI schemas and parameters
+ */
+function generateTypeAliases(spec) {
+  const typeAliases = [];
+  const typeMap = new Map();
+  const parameterTypeMap = new Map();
+
+  // Extract schemas and create aliases based on unique schema keys
+  if (spec.components && spec.components.schemas) {
+    for (const [schemaKey, schema] of Object.entries(spec.components.schemas)) {
+      if (schema.title) {
+        // Convert schema key to a valid TypeScript identifier
+        // Replace dots and special characters with underscores
+        const aliasName = schemaKey.replace(/[^a-zA-Z0-9]/g, '_');
+        const longTypePath = `components['schemas']['${schemaKey}']`;
+
+        typeAliases.push(`export type ${aliasName} = ${longTypePath};`);
+        typeMap.set(schemaKey, aliasName);
+      }
+    }
+  }
+
+  // Generate parameter type aliases for each operation
+  for (const [path, pathItem] of Object.entries(spec.paths || {})) {
+    for (const [method, operation] of Object.entries(pathItem)) {
+      if (!operation.operationId) continue;
+
+      const transformedOperationId = transformOperationId(operation.operationId);
+      const pathParams = extractPathParams(path);
+      const hasParams = pathParams.length > 0 || (operation.parameters && operation.parameters.length > 0);
+
+      if (hasParams) {
+        const parameterTypeName = `${capitalize(transformedOperationId)}Parameters`;
+        const parameterTypePath = `paths['${path}']['${method}']['parameters']`;
+
+        typeAliases.push(`export type ${parameterTypeName} = ${parameterTypePath};`);
+        parameterTypeMap.set(`${path}:${method}`, parameterTypeName);
+      }
+    }
+  }
+
+  return { typeAliases, typeMap, parameterTypeMap };
+}
+
+/**
+ * Finds the schema reference for a specific path/method/type combination
+ */
+function findSchemaReference(spec, path, method, type) {
+  try {
+    const pathItem = spec.paths[path];
+    if (!pathItem) return null;
+
+    const operation = pathItem[method];
+    if (!operation) return null;
+
+    if (type === 'response') {
+      // Check for success response codes (200-299)
+      if (operation.responses) {
+        const responseCodes = Object.keys(operation.responses)
+          .map(code => parseInt(code, 10))
+          .filter(code => !isNaN(code) && code >= 200 && code < 300)
+          .sort((a, b) => a - b);
+
+        for (const code of responseCodes) {
+          const response = operation.responses[code.toString()];
+          const schema = response.content?.['application/json']?.schema;
+          if (schema && schema.$ref) {
+            return {
+              schemaRef: schema.$ref.replace('#/components/schemas/', ''),
+              statusCode: code.toString()
+            };
+          }
         }
       }
-    })
-  })
-  
-  const hooksCode = hooks.join('\n')
-  
-  try {
-    writeFileSync(outputPath, hooksCode, 'utf-8')
-    console.log(`✅ Generated query hooks: ${outputPath}`)
-  } catch (error) {
-    console.error(`❌ Failed to generate query hooks:`, error.message)
-    throw error
-  }
-}
-
-/**
- * Generates a clean hook name from HTTP method and path
- */
-function generateHookName(method, path) {
-  // Create readable name from path
-  let baseName = path
-    .replace(/^\//, '') // Remove leading slash
-    .replace(/\/\{[^}]+\}/g, 'ById') // Replace path params with "ById"
-    .split('/')
-    .map(segment => {
-      // Convert kebab-case and snake_case to camelCase
-      return segment
-        .replace(/[-_]/g, ' ')
-        .replace(/\b\w/g, l => l.toUpperCase())
-        .replace(/\s/g, '')
-    })
-    .join('')
-  
-  // Use the generated name directly - it's already clean
-  const cleanName = baseName
-  
-  const prefix = 'use'
-  const suffix = method === 'get' ? 'Query' : 'Mutation'
-
-  return `${prefix}${cleanName}${suffix}`
-}
-
-/**
- * Creates type re-exports file
- * @param {string} outputPath - Path for type re-exports
- */
-function createTypeReExports(outputPath) {
-  console.log('🔧 Creating type re-exports...')
-  
-  const reExportsCode = `// Generated type re-exports - Do not edit manually
-export type { paths, components } from './generated/types'
-export { apiClient } from './generated/client'
-export * from './generated/queries'
-`
-
-  try {
-    writeFileSync(outputPath, reExportsCode, 'utf-8')
-    console.log(`✅ Generated type re-exports: ${outputPath}`)
-  } catch (error) {
-    console.error(`❌ Failed to generate type re-exports:`, error.message)
-    throw error
-  }
-}
-
-/**
- * Creates API client wrapper with configuration
- * @param {string} outputPath - Path for client wrapper
- */
-function createClientWrapper(outputPath) {
-  console.log('🔧 Creating client wrapper...')
-  
-  const wrapperCode = `// API client configuration wrapper
-import { apiClient } from './generated/client'
-
-// Configure global defaults
-apiClient.use({
-  onRequest(options) {
-    // Add any global request configuration here
-    // e.g., authentication headers, logging, etc.
-    console.log('API Request:', options.schemaPath, options.params)
-  }
-})
-
-apiClient.use({
-  onResponse(options) {
-    // Add any global response handling here
-    // e.g., error handling, logging, etc.
-    console.log('API Response:', options.schemaPath, options.response.status)
-  }
-})
-
-// Re-export the configured client
-export { apiClient }
-export * from './generated/client'
-`
-
-  try {
-    writeFileSync(outputPath, wrapperCode, 'utf-8')
-    console.log(`✅ Generated client wrapper: ${outputPath}`)
-  } catch (error) {
-    console.error(`❌ Failed to generate client wrapper:`, error.message)
-    throw error
-  }
-}
-
-/**
- * Main orchestration function
- */
-async function generateApiCode() {
-  try {
-    console.log('🚀 Starting OpenAPI code generation...')
-    console.log(`📍 Backend URL: ${backendUrl}`)
-    console.log(`📁 Use cached schema: ${useCachedSchema}`)
-    
-    // Ensure output directory exists
-    if (!existsSync(generatedDir)) {
-      mkdirSync(generatedDir, { recursive: true })
-      console.log(`📁 Created directory: ${generatedDir}`)
-    }
-    
-    // Get OpenAPI specification - use cached or fetch from backend
-    let spec
-    if (useCachedSchema) {
-      spec = loadCachedSchema()
-    } else {
-      try {
-        spec = await fetchOpenApiSpec(openApiUrl)
-        // Update cached schema file for future use
-        console.log(`💾 Updating cached schema: ${cachedSchemaPath}`)
-        writeFileSync(cachedSchemaPath, JSON.stringify(spec, null, 2), 'utf-8')
-      } catch (error) {
-        console.log(`⚠️  Backend fetch failed, attempting to use cached schema...`)
-        spec = loadCachedSchema()
+    } else if (type === 'requestBody') {
+      const requestBody = operation.requestBody;
+      const schema = requestBody?.content?.['application/json']?.schema;
+      if (schema && schema.$ref) {
+        return {
+          schemaRef: schema.$ref.replace('#/components/schemas/', ''),
+          statusCode: null
+        };
       }
     }
-    
-    // Save the spec for reference
-    const specPath = join(generatedDir, 'openapi-spec.json')
-    writeFileSync(specPath, JSON.stringify(spec, null, 2), 'utf-8')
-    console.log(`💾 Saved OpenAPI spec: ${specPath}`)
-    
-    // Generate TypeScript types
-    const typesPath = join(generatedDir, 'types.ts')
-    generateTypes(specPath, typesPath)
-    
-    // Generate API client
-    const clientPath = join(generatedDir, 'client.ts')
-    generateClient(clientPath)
-    
-    // Generate TanStack Query hooks
-    const hooksPath = join(generatedDir, 'queries.ts')
-    generateQueryHooks(spec, hooksPath)
-    
-    // Create integration files
-    const apiDir = join(projectRoot, 'src', 'lib', 'api')
-    if (!existsSync(apiDir)) {
-      mkdirSync(apiDir, { recursive: true })
-    }
-    
-    const typesReExportPath = join(apiDir, 'types.ts')
-    createTypeReExports(typesReExportPath)
-    
-    const clientWrapperPath = join(apiDir, 'client.ts')
-    if (!existsSync(clientWrapperPath)) {
-      createClientWrapper(clientWrapperPath)
-    } else {
-      console.log(`⏭️  Skipping client wrapper (already exists): ${clientWrapperPath}`)
-    }
-    
-    console.log('\n🎉 OpenAPI code generation completed successfully!')
-    console.log(`
-📊 Generated files:
-   • ${typesPath}
-   • ${clientPath} 
-   • ${hooksPath}
-   • ${typesReExportPath}
-   • ${clientWrapperPath}
-
-🔄 Next steps:
-   1. Run 'pnpm install' to install new dependencies
-   2. Update your components to use the generated types and client
-   3. The generated code is excluded from git via .gitignore
-    `)
-    
   } catch (error) {
-    console.error('\n💥 OpenAPI code generation failed:', error.message)
-    process.exit(1)
+    // Ignore errors and fall back to long path
+  }
+
+  return null;
+}
+
+/**
+ * Gets a friendly type alias or falls back to the original type path
+ */
+function getFriendlyType(spec, path, method, type, typeMap) {
+  const result = findSchemaReference(spec, path, method, type);
+
+  if (result && result.schemaRef && typeMap.has(result.schemaRef)) {
+    return typeMap.get(result.schemaRef);
+  }
+
+  // For responses, check if any success response exists, otherwise assume void
+  if (type === 'response') {
+    const operation = spec.paths[path]?.[method];
+    if (operation?.responses) {
+      // Get actual response codes, filter for success (200-299), and sort
+      const responseCodes = Object.keys(operation.responses)
+        .map(code => parseInt(code, 10))
+        .filter(code => !isNaN(code) && code >= 200 && code < 300)
+        .sort((a, b) => a - b);
+
+      for (const code of responseCodes) {
+        const response = operation.responses[code.toString()];
+        if (response.content?.['application/json']) {
+          // Has content, use the long path with the actual status code
+          return `NonNullable<paths['${path}']['${method}']['responses']['${code}']['content']['application/json']>`;
+        } else {
+          // No content, return void for operations that don't return data
+          return 'void';
+        }
+      }
+    }
+    // No success response found, assume void
+    return 'void';
+  } else if (type === 'requestBody') {
+    return `NonNullable<paths['${path}']['${method}']['requestBody']>['content']['application/json']`;
+  }
+
+  return 'void';
+}
+
+/**
+ * Main generation function
+ */
+async function generateAPI(options = {}) {
+  const { fetchMode = false, buildMode = false } = options;
+
+  try {
+    console.log('🚀 Starting API code generation...');
+
+    // Ensure output directory exists
+    ensureOutputDir();
+
+    // Fetch or load OpenAPI spec
+    const spec = await fetchAndCache({
+      forceRefresh: fetchMode,
+      buildMode: buildMode
+    });
+
+    // Generate all the files
+    generateTypes();
+    generateClient();
+    generateHooks(spec);
+
+    console.log('✅ API code generation completed successfully!');
+    console.log(`   Generated files:`);
+    console.log(`   - ${TYPES_FILE}`);
+    console.log(`   - ${CLIENT_FILE}`);
+    console.log(`   - ${HOOKS_FILE}`);
+
+  } catch (error) {
+    console.error('❌ API generation failed:', error.message);
+    throw error;
   }
 }
 
-// Run the generation
-generateApiCode()
+// CLI usage
+if (process.argv[1] === __filename) {
+  const args = process.argv.slice(2);
+  const fetchMode = args.includes('--fetch');
+  const buildMode = args.includes('--cache-only');
+
+  generateAPI({ fetchMode, buildMode })
+    .then(() => process.exit(0))
+    .catch(() => process.exit(1));
+}
+
+export { generateAPI };

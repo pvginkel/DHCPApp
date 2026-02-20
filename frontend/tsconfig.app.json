@@ -3,13 +3,10 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "target": "ES2022",
     "useDefineForClassFields": true,
-    "lib": [
-      "ES2022",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
+
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
@@ -17,31 +14,18 @@
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
+
     /* Path mapping */
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ],
-      "@/components/*": [
-        "./src/components/*"
-      ],
-      "@/lib/*": [
-        "./src/lib/*"
-      ],
-      "@/types/*": [
-        "./src/types/*"
-      ],
-      "@/hooks/*": [
-        "./src/hooks/*"
-      ],
-      "@/routes/*": [
-        "./src/routes/*"
-      ],
-      "@/api/*": [
-        "./src/lib/api/*"
-      ]
+      "@/*": ["./src/*"],
+      "@/components/*": ["./src/components/*"],
+      "@/routes/*": ["./src/routes/*"],
+      "@/lib/*": ["./src/lib/*"],
+      "@/hooks/*": ["./src/hooks/*"],
+      "@/types/*": ["./src/types/*"]
     },
+
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,
@@ -50,7 +34,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": [
-    "src"
-  ]
+  "include": ["src"]
 }

@@ -20,7 +20,6 @@ export function useLeaseSorting(leases: DhcpLease[]) {
   const handleSort = useCallback((field: SortableField) => {
     setSortConfig(current => {
       if (current.field === field) {
-        // Cycle through: asc -> desc -> none
         switch (current.direction) {
           case 'asc':
             return { field, direction: 'desc' }
@@ -30,7 +29,6 @@ export function useLeaseSorting(leases: DhcpLease[]) {
             return { field, direction: 'asc' }
         }
       } else {
-        // New field, start with ascending
         return { field, direction: 'asc' }
       }
     })

@@ -10,7 +10,9 @@ podTemplate(inheritFrom: 'jenkins-agent kaniko') {
                 url: 'https://github.com/pvginkel/DHCPAppUI.git'
         }
 
-        stage("Building DHCPApp UI") {
+        stage("Building dhcp-app") {
+            sh 'git rev-parse HEAD > git-rev'
+
             container('kaniko') {
                 helmCharts.kaniko([
                     "registry:5000/dhcpapp-ui:${currentBuild.number}",

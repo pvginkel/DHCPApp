@@ -6,7 +6,3 @@ export interface SortConfig {
   field: SortableField | null
   direction: SortDirection
 }
-
-export interface FilterConfig {
-  searchTerm: string
-}
