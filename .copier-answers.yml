@@ -1,15 +1,16 @@
 # Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
-_commit: v0.7.2
+_commit: v0.7.3
 _src_path: ../../ModernAppTemplate/backend
 author_email: pieter@example.com
 author_name: Pieter
-backend_port: 5000
+backend_port: 3301
 database_name: dhcp-app
 image_name: registry:5000/dhcpapp
 project_description: DHCP Network Management API
 project_name: dhcp-app
 repo_url: https://github.com/pvginkel/DHCPApp.git
 s3_bucket_name: dhcp-app-attachments
+sse_gateway_port: 3302
 testing_port_offset: 10
 use_database: false
 use_oidc: true
