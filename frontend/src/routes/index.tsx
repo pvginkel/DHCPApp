@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { LeaseTable } from '@/components/dhcp/lease-table'
 import { StatsCards } from '@/components/dhcp/stats-cards'
 import { useDataChangeSse } from '@/hooks/use-data-change-sse'
-import { useDhcpLeases } from '@/lib/api/generated/hooks'
+import { useDhcpLeases } from '@/lib/api/leases'
 
 function HomePage() {
   const { isConnected } = useDataChangeSse()

@@ -1,7 +1,5 @@
 import type { DhcpPool } from '@/types/pools'
-import type { components } from '@/lib/api/generated/types'
-
-type DhcpLease = components['schemas']['DhcpLease']
+import type { DhcpLease } from '@/types/lease'
 
 export function calculateTotalLeases(leases: DhcpLease[]): number {
   return leases.filter(lease => lease.is_active).length

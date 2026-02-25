@@ -1,7 +1,4 @@
-import type { components } from '@/lib/api/generated/types'
-import type { SortableField, SortDirection, SortConfig } from '@/types/lease'
-
-type DhcpLease = components['schemas']['DhcpLease']
+import type { DhcpLease, SortableField, SortDirection, SortConfig } from '@/types/lease'
 
 export function getSortKey(lease: DhcpLease, field: SortableField): string | number | Date {
   switch (field) {

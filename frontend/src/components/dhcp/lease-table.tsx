@@ -13,14 +13,11 @@ import {
   getLeaseStatusDisplay
 } from '@/lib/utils/lease-utils'
 import { useRef, useState, useEffect } from 'react'
-import type { components } from '@/lib/api/generated/types'
+import type { DhcpLease, SortableField } from '@/types/lease'
 import { useLeaseSorting } from '@/hooks/use-lease-sorting'
 import { useLeaseFiltering } from '@/hooks/use-lease-filtering'
 import { TableControls } from '@/components/dhcp/table-controls'
 import { ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
-import type { SortableField } from '@/types/lease'
-
-type DhcpLease = components['schemas']['DhcpLease']
 
 interface LeaseChangeState {
   [key: string]: {

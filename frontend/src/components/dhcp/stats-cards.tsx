@@ -5,9 +5,7 @@ import {
   calculateExpiringToday,
   calculateDeviceTypes,
 } from '@/lib/utils/stats-utils'
-import type { components } from '@/lib/api/generated/types'
-
-type DhcpLease = components['schemas']['DhcpLease']
+import type { DhcpLease } from '@/types/lease'
 
 interface StatCardProps {
   title: string

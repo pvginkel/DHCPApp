@@ -1,7 +1,5 @@
-import type { components } from '@/lib/api/generated/types'
+import type { DhcpLease } from '@/types/lease'
 import { getLeaseStatus, getLeaseStatusDisplay } from '@/lib/utils/lease-utils'
-
-type DhcpLease = components['schemas']['DhcpLease']
 
 export function matchesSearchTerm(lease: DhcpLease, searchTerm: string): boolean {
   if (!searchTerm.trim()) {

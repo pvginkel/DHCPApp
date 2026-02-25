@@ -1,10 +1,7 @@
 import { useCallback } from 'react'
 import { useLocalStorage } from '@/hooks/use-local-storage'
 import { sortLeases } from '@/lib/utils/lease-sorting'
-import type { components } from '@/lib/api/generated/types'
-import type { SortableField, SortConfig } from '@/types/lease'
-
-type DhcpLease = components['schemas']['DhcpLease']
+import type { DhcpLease, SortableField, SortConfig } from '@/types/lease'
 
 const DEFAULT_SORT_CONFIG: SortConfig = {
   field: 'lease_time',

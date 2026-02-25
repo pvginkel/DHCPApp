@@ -1,6 +1,4 @@
-import type { components } from '@/lib/api/generated/types'
-
-type DhcpLease = components['schemas']['DhcpLease']
+import type { DhcpLease } from '@/types/lease'
 
 export function formatLeaseExpiration(leaseTime: string): string {
   const date = new Date(leaseTime)

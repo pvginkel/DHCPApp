@@ -1,8 +1,6 @@
 import { useState, useMemo } from 'react'
 import { filterLeases } from '@/lib/utils/lease-filtering'
-import type { components } from '@/lib/api/generated/types'
-
-type DhcpLease = components['schemas']['DhcpLease']
+import type { DhcpLease } from '@/types/lease'
 
 export function useLeaseFiltering(leases: DhcpLease[]) {
   const [searchTerm, setSearchTerm] = useState('')
