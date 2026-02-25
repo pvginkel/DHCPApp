@@ -77,6 +77,240 @@
         "title": "DeploymentTriggerResponseSchema",
         "type": "object"
       },
+      "DhcpLeaseResponseList.a9993e3": {
+        "items": {
+          "$ref": "#/components/schemas/DhcpLeaseResponseList.a9993e3.DhcpLeaseResponse"
+        },
+        "title": "DhcpLeaseResponseList",
+        "type": "array"
+      },
+      "DhcpLeaseResponseList.a9993e3.DhcpLeaseResponse": {
+        "description": "Schema for a single DHCP lease in API responses.",
+        "properties": {
+          "client_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional client identifier",
+            "title": "Client Id"
+          },
+          "hostname": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Hostname of the client device",
+            "title": "Hostname"
+          },
+          "ip_address": {
+            "description": "IPv4 address assigned to the client",
+            "title": "Ip Address",
+            "type": "string"
+          },
+          "is_active": {
+            "description": "Whether the lease is currently active",
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "is_static": {
+            "description": "Whether this is a static DHCP assignment",
+            "title": "Is Static",
+            "type": "boolean"
+          },
+          "lease_time": {
+            "description": "Lease expiration time in ISO 8601 format",
+            "title": "Lease Time",
+            "type": "string"
+          },
+          "mac_address": {
+            "description": "MAC address of the client device",
+            "title": "Mac Address",
+            "type": "string"
+          },
+          "pool_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Name of the DHCP pool this lease belongs to",
+            "title": "Pool Name"
+          },
+          "vendor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Device manufacturer from MAC OUI lookup",
+            "title": "Vendor"
+          }
+        },
+        "required": [
+          "ip_address",
+          "mac_address",
+          "hostname",
+          "lease_time",
+          "client_id",
+          "is_active",
+          "is_static",
+          "pool_name",
+          "vendor"
+        ],
+        "title": "DhcpLeaseResponse",
+        "type": "object"
+      },
+      "DhcpPoolResponseList.a9993e3": {
+        "items": {
+          "$ref": "#/components/schemas/DhcpPoolResponseList.a9993e3.DhcpPoolResponse"
+        },
+        "title": "DhcpPoolResponseList",
+        "type": "array"
+      },
+      "DhcpPoolResponseList.a9993e3.DhcpPoolResponse": {
+        "description": "Schema for a single DHCP pool in API responses.",
+        "properties": {
+          "end_ip": {
+            "description": "Ending IP address of the pool range",
+            "title": "End Ip",
+            "type": "string"
+          },
+          "lease_duration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Lease duration in seconds",
+            "title": "Lease Duration"
+          },
+          "netmask": {
+            "description": "Subnet mask for the pool",
+            "title": "Netmask",
+            "type": "string"
+          },
+          "pool_name": {
+            "description": "Pool identifier/tag name",
+            "title": "Pool Name",
+            "type": "string"
+          },
+          "start_ip": {
+            "description": "Starting IP address of the pool range",
+            "title": "Start Ip",
+            "type": "string"
+          },
+          "total_addresses": {
+            "description": "Total number of addresses in the pool",
+            "title": "Total Addresses",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pool_name",
+          "start_ip",
+          "end_ip",
+          "netmask",
+          "lease_duration",
+          "total_addresses"
+        ],
+        "title": "DhcpPoolResponse",
+        "type": "object"
+      },
+      "DhcpPoolUsageResponseList.a9993e3": {
+        "items": {
+          "$ref": "#/components/schemas/DhcpPoolUsageResponseList.a9993e3.DhcpPoolUsageResponse"
+        },
+        "title": "DhcpPoolUsageResponseList",
+        "type": "array"
+      },
+      "DhcpPoolUsageResponseList.a9993e3.DhcpPoolUsageResponse": {
+        "description": "Schema for DHCP pool usage statistics.",
+        "properties": {
+          "available_addresses": {
+            "description": "Number of available addresses",
+            "title": "Available Addresses",
+            "type": "integer"
+          },
+          "end_ip": {
+            "description": "Ending IP address of the pool range",
+            "title": "End Ip",
+            "type": "string"
+          },
+          "lease_duration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Lease duration in seconds",
+            "title": "Lease Duration"
+          },
+          "netmask": {
+            "description": "Subnet mask for the pool",
+            "title": "Netmask",
+            "type": "string"
+          },
+          "pool_name": {
+            "description": "Pool identifier/tag name",
+            "title": "Pool Name",
+            "type": "string"
+          },
+          "start_ip": {
+            "description": "Starting IP address of the pool range",
+            "title": "Start Ip",
+            "type": "string"
+          },
+          "total_addresses": {
+            "description": "Total number of addresses in the pool",
+            "title": "Total Addresses",
+            "type": "integer"
+          },
+          "usage_percentage": {
+            "description": "Percentage of pool utilization",
+            "title": "Usage Percentage",
+            "type": "number"
+          },
+          "used_addresses": {
+            "description": "Number of addresses currently in use",
+            "title": "Used Addresses",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pool_name",
+          "start_ip",
+          "end_ip",
+          "netmask",
+          "lease_duration",
+          "total_addresses",
+          "used_addresses",
+          "available_addresses",
+          "usage_percentage"
+        ],
+        "title": "DhcpPoolUsageResponse",
+        "type": "object"
+      },
       "ForceErrorQuerySchema.e510e64": {
         "description": "Query parameters for force-error endpoint.",
         "properties": {
@@ -563,7 +797,28 @@
         "description": "",
         "operationId": "get__api_dhcp_leases",
         "parameters": [],
-        "responses": {},
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DhcpLeaseResponseList.a9993e3"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError.6a07bef"
+                }
+              }
+            },
+            "description": "Bad Request"
+          }
+        },
         "summary": "Get all DHCP leases.",
         "tags": []
       }
@@ -573,7 +828,28 @@
         "description": "",
         "operationId": "get__api_dhcp_pools",
         "parameters": [],
-        "responses": {},
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DhcpPoolResponseList.a9993e3"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError.6a07bef"
+                }
+              }
+            },
+            "description": "Bad Request"
+          }
+        },
         "summary": "Get all DHCP pools.",
         "tags": []
       }
@@ -583,7 +859,28 @@
         "description": "",
         "operationId": "get__api_dhcp_pools_usage",
         "parameters": [],
-        "responses": {},
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DhcpPoolUsageResponseList.a9993e3"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError.6a07bef"
+                }
+              }
+            },
+            "description": "Bad Request"
+          }
+        },
         "summary": "Get DHCP pool usage statistics.",
         "tags": []
       }
