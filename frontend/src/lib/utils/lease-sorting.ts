@@ -1,6 +1,6 @@
 import type { DhcpLease, SortableField, SortDirection, SortConfig } from '@/types/lease'
 
-export function getSortKey(lease: DhcpLease, field: SortableField): string | number | Date {
+function getSortKey(lease: DhcpLease, field: SortableField): string | number | Date {
   switch (field) {
     case 'ip_address':
       return lease.ip_address
@@ -24,7 +24,7 @@ export function getSortKey(lease: DhcpLease, field: SortableField): string | num
   }
 }
 
-export function compareLease(
+function compareLease(
   a: DhcpLease,
   b: DhcpLease,
   field: SortableField,

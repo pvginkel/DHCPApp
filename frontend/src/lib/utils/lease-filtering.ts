@@ -1,7 +1,7 @@
 import type { DhcpLease } from '@/types/lease'
 import { getLeaseStatus, getLeaseStatusDisplay } from '@/lib/utils/lease-utils'
 
-export function matchesSearchTerm(lease: DhcpLease, searchTerm: string): boolean {
+function matchesSearchTerm(lease: DhcpLease, searchTerm: string): boolean {
   if (!searchTerm.trim()) {
     return true
   }
