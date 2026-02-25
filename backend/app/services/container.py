@@ -22,7 +22,6 @@ from app.services.testing_service import TestingService
 from app.utils.lifecycle_coordinator import LifecycleCoordinator
 from app.utils.temp_file_manager import TempFileManager
 
-
 # Background service startup registry. Services register lambdas here
 # (co-located with their provider definitions) that are invoked by
 # start_background_services() during app startup.

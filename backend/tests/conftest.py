@@ -12,7 +12,7 @@ import pytest
 from app.app_config import AppSettings
 
 # Import all infrastructure fixtures
-from tests.conftest_infrastructure import *  # noqa: F401, F403
+from tests.conftest_infrastructure import *  # noqa: F403
 
 
 @pytest.fixture
