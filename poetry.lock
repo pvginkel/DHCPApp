@@ -2483,6 +2483,18 @@ socks = ["pysocks (>=1.5.6,!=1.5.7,<2.0)"]
 zstd = ["backports-zstd (>=1.0.0) ; python_version < \"3.14\""]
 
 [[package]]
+name = "vulture"
+version = "2.14"
+description = "Find dead code"
+optional = false
+python-versions = ">=3.8"
+groups = ["dev"]
+files = [
+    {file = "vulture-2.14-py2.py3-none-any.whl", hash = "sha256:d9a90dba89607489548a49d557f8bac8112bd25d3cbc8aeef23e860811bd5ed9"},
+    {file = "vulture-2.14.tar.gz", hash = "sha256:cb8277902a1138deeab796ec5bef7076a6e0248ca3607a3f3dee0b6d9e9b8415"},
+]
+
+[[package]]
 name = "waitress"
 version = "3.0.2"
 description = "Waitress WSGI server"
@@ -2676,4 +2688,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.13"
-content-hash = "6bfc269aa4b0aead09ae8a7157f4f7a326d691c0e076f8e44e661f6fca08e222"
+content-hash = "0c9c4ced17ed63e75022fcfcb477301044c42f5e95f99452c156283c82fa6fe2"
