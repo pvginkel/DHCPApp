@@ -8,23 +8,38 @@ This is a DHCP monitoring application backend designed for homelab environments.
 ## Development Commands
 
 ### Python Environment Setup
-This project uses virtualenvwrapper. Activate the environment before running any Python commands:
+This project uses Poetry for dependency management:
 ```bash
-workon dhcp-backend
+poetry install        # Install dependencies
+poetry shell          # Activate the virtual environment
 ```
 
 ### Running the Application
-- **Development**: `python app.py` (runs with debug mode and reloader)
-- **Production**: Set `FLASK_ENV=production` then run `python app.py`
+- **Development**: `poetry run python app.py` (runs with debug mode and reloader)
+- **Production**: Set `FLASK_ENV=production` then run `poetry run python app.py`
 - **Docker**: Use the provided scripts:
   - `./scripts/build.sh` - Build Docker image
   - `./scripts/run.sh` - Build and run container
   - `./scripts/stop.sh` - Stop running container
 
+### Code Quality
+Before committing, run all checks with a single command:
+```bash
+poetry run check   # Runs ruff, mypy, vulture, and pytest
+```
+
+Or run individual tools:
+```bash
+poetry run ruff check .                                           # Linting
+poetry run mypy .                                                 # Type checking
+poetry run vulture app/ vulture_whitelist.py --min-confidence 80  # Dead code detection
+poetry run pytest                                                 # Full test suite
+```
+
 ### Testing
-- **Run all tests**: `pytest`
-- **Run with coverage**: `pytest --cov=app`
-- **Single test file**: `pytest test/test_dhcp_service.py`
+- **Run all tests**: `poetry run pytest`
+- **Run with coverage**: `poetry run pytest --cov=app`
+- **Single test file**: `poetry run pytest test/test_dhcp_service.py`
 - **Test API endpoints**: Use `curl -4` for IPv4-only requests (e.g., `curl -4 -s http://localhost:5001/api/v1/leases`)
 
 ### Configuration
