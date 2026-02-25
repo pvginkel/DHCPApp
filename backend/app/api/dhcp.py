@@ -5,9 +5,16 @@ from typing import Any
 
 from dependency_injector.wiring import Provide, inject
 from flask import Blueprint, jsonify
+from spectree import Response as SpectreeResponse
 
+from app.schemas.dhcp_schema import (
+    DhcpLeaseResponse,
+    DhcpPoolResponse,
+    DhcpPoolUsageResponse,
+)
 from app.services.container import ServiceContainer
 from app.services.dhcp_service import DhcpService
+from app.utils.spectree_config import api
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +22,7 @@ dhcp_bp = Blueprint("dhcp", __name__, url_prefix="/dhcp")
 
 
 @dhcp_bp.route("/leases", methods=["GET"])
+@api.validate(resp=SpectreeResponse(HTTP_200=list[DhcpLeaseResponse]))
 @inject
 def get_leases(
     dhcp_service: DhcpService = Provide[ServiceContainer.dhcp_service],
@@ -25,6 +33,7 @@ def get_leases(
 
 
 @dhcp_bp.route("/pools", methods=["GET"])
+@api.validate(resp=SpectreeResponse(HTTP_200=list[DhcpPoolResponse]))
 @inject
 def get_pools(
     dhcp_service: DhcpService = Provide[ServiceContainer.dhcp_service],
@@ -35,6 +44,7 @@ def get_pools(
 
 
 @dhcp_bp.route("/pools/usage", methods=["GET"])
+@api.validate(resp=SpectreeResponse(HTTP_200=list[DhcpPoolUsageResponse]))
 @inject
 def get_pool_usage(
     dhcp_service: DhcpService = Provide[ServiceContainer.dhcp_service],
