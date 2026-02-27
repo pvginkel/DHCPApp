@@ -68,7 +68,11 @@ class ServiceContainer(containers.DeclarativeContainer):
     )
 
     # Auth services - OIDC authentication
-    auth_service = providers.Singleton(AuthService, config=config)
+    auth_service = providers.Singleton(
+        AuthService,
+        config=config,
+        write_role="editor",
+    )
     oidc_client_service = providers.Singleton(OidcClientService, config=config)
 
     # Testing service - test sessions and content generation
