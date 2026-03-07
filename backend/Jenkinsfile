@@ -4,23 +4,32 @@ library('JenkinsPipelineUtils') _
 
 podTemplate(inheritFrom: 'jenkins-agent kaniko') {
     node(POD_LABEL) {
-        stage('Cloning repo') {
+        stage('Clone repo') {
             git branch: 'main',
                 credentialsId: '5f6fbd66-b41c-405f-b107-85ba6fd97f10',
                 url: 'https://github.com/pvginkel/DHCPApp.git'
         }
 
-        stage("Building dhcp-app") {
+        stage('Build dhcp-app') {
+            def gitRev = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
+
             container('kaniko') {
                 helmCharts.kaniko([
-                    "registry:5000/dhcpapp:${currentBuild.number}",
-                    "registry:5000/dhcpapp:latest"
+                    "registry:5000/dhcpapp:${currentBuild.number}"
                 ])
             }
+
+            writeJSON file: 'backend-build.json', json: [tag: ":${currentBuild.number}", gitRev: gitRev]
+            archiveArtifacts artifacts: 'backend-build.json', fingerprint: true
         }
 
-        stage('Deploy Helm charts') {
-            build job: 'HelmCharts', wait: false
+        stage('Start validation') {
+            build job: 'DHCPAppValidation',
+                wait: false,
+                parameters: [
+                    string(name: 'BACKEND_BUILD', value: "${currentBuild.number}"),
+                    string(name: 'TRIGGERED_BY', value: 'backend')
+                ]
         }
     }
 }
