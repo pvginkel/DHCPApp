@@ -1,0 +1,228 @@
+properties([
+    parameters([
+        string(name: 'BACKEND_BUILD', defaultValue: ''),
+        string(name: 'FRONTEND_BUILD', defaultValue: ''),
+        string(name: 'TRIGGERED_BY')
+    ])
+])
+
+podTemplate(inheritFrom: 'jenkins-agent kaniko', containers: [
+    containerTemplates.k8s('k8s')
+]) {
+    node(POD_LABEL) {
+        def backendMeta
+        def frontendMeta
+
+        stage('Cloning repo') {
+            git branch: 'main',
+                credentialsId: '5f6fbd66-b41c-405f-b107-85ba6fd97f10',
+                url: 'https://github.com/pvginkel/DHCPAppUI.git'
+        }
+
+        stage('Resolve image pair') {
+            steps {
+                script {
+                    copyArtifacts(
+                        projectName: 'DHCPApp',
+                        selector: params.BACKEND_BUILD ? specific(params.BACKEND_BUILD) : lastSuccessful(),
+                        filter: 'backend-build.json',
+                        target: 'backend-meta',
+                        flatten: true
+                    )
+
+                    copyArtifacts(
+                        projectName: 'DHCPAppUI',
+                        selector: params.FRONTEND_BUILD ? specific(params.FRONTEND_BUILD) : lastSuccessful(),
+                        filter: 'frontend-build.json',
+                        target: 'frontend-meta',
+                        flatten: true
+                    )
+
+                    backendMeta = readJSON file: 'backend-meta/backend-build.json'
+                    frontendMeta = readJSON file: 'frontend-meta/frontend-build.json'
+
+                    echo "Testing backend=${backendMeta.tag} (${backendMeta.gitRev})"
+                    echo "Testing frontend=${frontendMeta.tag} (${frontendMeta.gitRev})"
+                }
+            }
+        }
+
+        stage('Build dhcp-app validation image') {
+            container('kaniko') {
+                helmCharts.kaniko dockerfile: 'Dockerfile.validation',
+                    destinations: [
+                        "registry:5000/dhcpapp-validation:${currentBuild.number}"
+                    ])
+            }
+        }
+
+        stage('Perform validation') {
+            container('k8s') {
+                /*
+                This will start a job with the above image and check the exit code of it. Something like this:
+
+          sh '''
+            set -euo pipefail
+
+            cat > e2e-job.yaml <<EOF
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ${K8S_JOB_NAME}
+  namespace: ${TEST_NAMESPACE}
+  labels:
+    app.kubernetes.io/name: e2e
+    app.kubernetes.io/managed-by: jenkins
+    jenkins/job: "${JOB_NAME}"
+    jenkins/build-number: "${BUILD_NUMBER}"
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 3600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: e2e
+        job-name: ${K8S_JOB_NAME}
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: e2e
+          image: ${TEST_IMAGE}
+          imagePullPolicy: Always
+          env:
+            - name: BACKEND_IMAGE
+              value: "${BACKEND_IMAGE}"
+            - name: FRONTEND_IMAGE
+              value: "${FRONTEND_IMAGE}"
+EOF
+
+            kubectl apply -f e2e-job.yaml
+          '''
+
+                Use this as inspiration only!
+                
+                The point is to run the Playwright test suite. Exactly the same as if we
+                would be running pnpm playwright test from our checkout.
+
+                I was debating how we get what we need to do this. Initially I wanted
+                to do something like copy artifacts from the docker images, but I realize
+                this is not necessary. Instead the build artifact files (backendMeta and
+                frontendMeta) now track the git revision that they built. We can leverage this.
+                
+                So what are we going to do. The docker image will have the following
+
+                - /work/backend will have a shallow clone of the backend repo (see
+                  ../backend/Jenkinsfile) and /work/frontend for the frontend.
+                - /docker-entrypoint.sh will be a script that does this:
+                    - Run the test suites:
+
+                        - For the backend:
+
+                            poetry install --no-interaction
+                            poetry run pytest -v --tb=short
+
+                        - For the frontend:
+
+                            pnpm install --frozen-lockfile --config.confirmModulesPurge=false
+                            pnpm build
+                            pnpm playwright install chromium
+                            pnpm playwright test --reporter=list
+
+                    - You do need to make sure that this works. What I mean is that the Playwright
+                      suite needs to be able to find the backend. But, I think that ../backend is the
+                      default path it looks at, right?
+
+                    - Make sure the whole thing fails at the first failure. set -euo pipefail I presume?
+                      There's no need to communicate a structured result. The exit code is the only
+                      thing used.
+
+                Base the image off of registry:5000/modern-app-dev. Your container has the same basis.
+                It's guaranteed to have all tools available needed to run the Playwright suite.
+
+                After the job is started we need to wait for it to complete and get the exit code.
+                Something like this:
+
+    stage('Wait for completion or failure') {
+      steps {
+        container('kubectl') {
+          sh '''
+            set -euo pipefail
+
+            deadline=$(( $(date +%s) + 3660 ))
+
+            while true; do
+              complete="$(kubectl get job "$K8S_JOB_NAME" -n "$TEST_NAMESPACE" -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' 2>/dev/null || true)"
+              failed="$(kubectl get job "$K8S_JOB_NAME" -n "$TEST_NAMESPACE" -o jsonpath='{.status.conditions[?(@.type=="Failed")].status}' 2>/dev/null || true)"
+
+              if [ "$complete" = "True" ] || [ "$failed" = "True" ]; then
+                break
+              fi
+
+              if [ "$(date +%s)" -ge "$deadline" ]; then
+                echo "Timed out waiting for Job terminal state" >&2
+                break
+              fi
+
+              sleep 10
+            done
+          '''
+        }
+      }
+    }
+
+    stage('Capture pod result') {
+      steps {
+        container('kubectl') {
+          sh '''
+            set -euo pipefail
+
+            pod_name="$(kubectl get pods -n "$TEST_NAMESPACE" -l job-name="$K8S_JOB_NAME" -o jsonpath='{.items[0].metadata.name}')"
+            echo "$pod_name" > pod-name.txt
+
+            kubectl logs -n "$TEST_NAMESPACE" "$pod_name" -c e2e > e2e.log 2>&1 || true
+            kubectl get pod "$pod_name" -n "$TEST_NAMESPACE" -o yaml > pod.yaml || true
+            kubectl get job "$K8S_JOB_NAME" -n "$TEST_NAMESPACE" -o yaml > job.yaml || true
+
+            exit_code="$(kubectl get pod "$pod_name" -n "$TEST_NAMESPACE" -o jsonpath='{.status.containerStatuses[?(@.name=="e2e")].state.terminated.exitCode}' || true)"
+            echo "${exit_code:-}" > container-exit-code.txt
+
+            fail_reason="$(kubectl get job "$K8S_JOB_NAME" -n "$TEST_NAMESPACE" -o jsonpath='{.status.conditions[?(@.type=="Failed")].reason}' || true)"
+            echo "${fail_reason:-}" > job-failed-reason.txt
+          '''
+
+          script {
+            env.POD_NAME = readFile('pod-name.txt').trim()
+            env.CONTAINER_EXIT_CODE = readFile('container-exit-code.txt').trim()
+            def failReason = readFile('job-failed-reason.txt').trim()
+
+            currentBuild.description = "job=${env.K8S_JOB_NAME}, pod=${env.POD_NAME}, exit=${env.CONTAINER_EXIT_CODE ?: 'n/a'}"
+
+            if (!env.CONTAINER_EXIT_CODE) {
+              error("No terminated exit code found for pod ${env.POD_NAME}${failReason ? " (job reason: ${failReason})" : ""}")
+            }
+
+            if (env.CONTAINER_EXIT_CODE != '0') {
+              error("Integration tests failed with exit code ${env.CONTAINER_EXIT_CODE}${failReason ? " (job reason: ${failReason})" : ""}")
+            }
+          }
+        }
+      }
+    }
+
+                Again, use this for inspiration only.
+                */
+            }
+        }
+
+        stage('Promote build') {
+            container('k8s') {
+                sh "crane tag --insecure registry:5000/dhcpapp${backendMeta.tag} latest"
+                sh "crane tag --insecure registry:5000/dhcpapp-ui${frontendMeta.tag} latest"
+            }
+        }
+
+        stage('Deploy Helm charts') {
+            build job: 'HelmCharts', wait: false
+        }
+    }
+}
