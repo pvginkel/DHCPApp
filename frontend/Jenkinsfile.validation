@@ -141,6 +141,31 @@ EOF
                     sh "kubectl logs -n '${k8sNamespace}' '${podName}' -c validation > validation.log 2>&1 || true"
                     archiveArtifacts artifacts: 'validation.log', allowEmptyArchive: true
 
+                    sh '''
+                        set -euo pipefail
+
+                        mkdir -p test-results
+
+                        awk '
+                            /^===JUNIT:.*===$/ {
+                                fname = $0
+                                sub(/^===JUNIT:/, "", fname)
+                                sub(/===$/, "", fname)
+                                content = ""
+                                capture = 1
+                                next
+                            }
+                            /^===JUNIT_END===$/ {
+                                print content | "base64 -d > test-results/" fname
+                                close("base64 -d > test-results/" fname)
+                                capture = 0
+                                next
+                            }
+                            capture { content = content (content ? "\\n" : "") $0 }
+                        ' validation.log
+                    '''
+                    junit testResults: 'test-results/*.xml', allowEmptyResults: true
+
                     def exitCode = sh(
                         script: "kubectl get pod '${podName}' -n '${k8sNamespace}' -o jsonpath='{.status.containerStatuses[?(@.name==\"validation\")].state.terminated.exitCode}'",
                         returnStdout: true
