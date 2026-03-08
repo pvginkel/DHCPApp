@@ -138,8 +138,7 @@ EOF
                         returnStdout: true
                     ).trim()
 
-                    sh "kubectl logs -n '${k8sNamespace}' '${podName}' -c validation > validation.log 2>&1 || true"
-                    archiveArtifacts artifacts: 'validation.log', allowEmptyArchive: true
+                    sh "kubectl logs -n '${k8sNamespace}' '${podName}' -c validation > validation-raw.log 2>&1 || true"
 
                     sh '''
                         set -euo pipefail
@@ -162,8 +161,10 @@ EOF
                                 next
                             }
                             capture { content = content (content ? "\\n" : "") $0 }
-                        ' validation.log
+                            !capture { print }
+                        ' validation-raw.log > validation.log
                     '''
+                    archiveArtifacts artifacts: 'validation.log', allowEmptyArchive: true
                     junit testResults: 'test-results/*.xml', allowEmptyResults: true
 
                     def exitCode = sh(
