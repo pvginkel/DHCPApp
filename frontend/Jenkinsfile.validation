@@ -15,7 +15,7 @@ podTemplate(inheritFrom: 'jenkins-agent kaniko', containers: [
         def backendMeta
         def frontendMeta
         def jobName = "dhcpapp-validation-${BUILD_NUMBER}"
-        def k8sNamespace = sh(script: 'cat /var/run/secrets/kubernetes.io/serviceaccount/namespace', returnStdout: true).trim()
+        def k8sNamespace = kubectl.currentNamespace()
 
         stage('Clone repo') {
             git branch: 'main',
@@ -76,115 +76,72 @@ podTemplate(inheritFrom: 'jenkins-agent kaniko', containers: [
 
         stage('Run validation') {
             container('k8s') {
-                def testImage = "registry:5000/dhcpapp-validation:${currentBuild.number}"
+                kubectl.startJob("""
+                    apiVersion: batch/v1
+                    kind: Job
+                    metadata:
+                      name: ${jobName}
+                      namespace: ${k8sNamespace}
+                      labels:
+                        app.kubernetes.io/name: dhcpapp-validation
+                        app.kubernetes.io/managed-by: jenkins
+                        jenkins/build-number: "${BUILD_NUMBER}"
+                    spec:
+                      backoffLimit: 0
+                      activeDeadlineSeconds: 3600
+                      ttlSecondsAfterFinished: 3600
+                      template:
+                        spec:
+                          restartPolicy: Never
+                          containers:
+                            - name: validation
+                              image: registry:5000/dhcpapp-validation:${currentBuild.number}
+                              imagePullPolicy: Always
+                """.stripIndent())
 
-                withEnv([
-                    "K8S_JOB_NAME=${jobName}",
-                    "K8S_NAMESPACE=${k8sNamespace}",
-                    "TEST_IMAGE=${testImage}"
-                ]) {
-                    sh '''
-                        set -euo pipefail
+                kubectl.waitForJob(jobName, k8sNamespace)
 
-                        cat > e2e-job.yaml <<EOF
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: $K8S_JOB_NAME
-  namespace: $K8S_NAMESPACE
-  labels:
-    app.kubernetes.io/name: dhcpapp-validation
-    app.kubernetes.io/managed-by: jenkins
-    jenkins/build-number: "$BUILD_NUMBER"
-spec:
-  backoffLimit: 0
-  activeDeadlineSeconds: 3600
-  ttlSecondsAfterFinished: 3600
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: dhcpapp-validation
-        job-name: $K8S_JOB_NAME
-    spec:
-      restartPolicy: Never
-      containers:
-        - name: validation
-          image: $TEST_IMAGE
-          imagePullPolicy: Always
-EOF
+                def podName = kubectl.getJobPodName(jobName, k8sNamespace)
+                kubectl.savePodLogs(podName, 'validation', k8sNamespace, 'validation-raw.log')
 
-                        kubectl apply -f e2e-job.yaml
-                    '''
+                sh '''
+                    set -euo pipefail
 
-                    sh '''
-                        set -euo pipefail
+                    mkdir -p test-results
 
-                        while true; do
-                            complete="$(kubectl get job "$K8S_JOB_NAME" -n "$K8S_NAMESPACE" \
-                                -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' 2>/dev/null || true)"
-                            failed="$(kubectl get job "$K8S_JOB_NAME" -n "$K8S_NAMESPACE" \
-                                -o jsonpath='{.status.conditions[?(@.type=="Failed")].status}' 2>/dev/null || true)"
+                    awk '
+                        /^===JUNIT:.*===$/ {
+                            fname = $0
+                            sub(/^===JUNIT:/, "", fname)
+                            sub(/===$/, "", fname)
+                            content = ""
+                            capture = 1
+                            next
+                        }
+                        /^===JUNIT_END===$/ {
+                            print content | "base64 -d > test-results/" fname
+                            close("base64 -d > test-results/" fname)
+                            capture = 0
+                            next
+                        }
+                        capture { content = content (content ? "\\n" : "") $0 }
+                        !capture { print }
+                    ' validation-raw.log > validation.log
+                '''
+                archiveArtifacts artifacts: 'validation.log', allowEmptyArchive: true
+                junit testResults: 'test-results/*.xml', allowEmptyResults: true
 
-                            if [ "$complete" = "True" ] || [ "$failed" = "True" ]; then
-                                break
-                            fi
+                def exitCode = kubectl.getContainerExitCode(podName, 'validation', k8sNamespace)
+                def failReason = kubectl.getJobFailReason(jobName, k8sNamespace)
 
-                            sleep 10
-                        done
-                    '''
+                currentBuild.description = "job=${jobName}, pod=${podName}, exit=${exitCode ?: 'n/a'}"
 
-                    def podName = sh(
-                        script: "kubectl get pods -n '${k8sNamespace}' -l job-name='${jobName}' -o jsonpath='{.items[0].metadata.name}'",
-                        returnStdout: true
-                    ).trim()
+                if (!exitCode) {
+                    error("No exit code found for pod ${podName}${failReason ? " (reason: ${failReason})" : ""}")
+                }
 
-                    sh "kubectl logs -n '${k8sNamespace}' '${podName}' -c validation > validation-raw.log 2>&1 || true"
-
-                    sh '''
-                        set -euo pipefail
-
-                        mkdir -p test-results
-
-                        awk '
-                            /^===JUNIT:.*===$/ {
-                                fname = $0
-                                sub(/^===JUNIT:/, "", fname)
-                                sub(/===$/, "", fname)
-                                content = ""
-                                capture = 1
-                                next
-                            }
-                            /^===JUNIT_END===$/ {
-                                print content | "base64 -d > test-results/" fname
-                                close("base64 -d > test-results/" fname)
-                                capture = 0
-                                next
-                            }
-                            capture { content = content (content ? "\\n" : "") $0 }
-                            !capture { print }
-                        ' validation-raw.log > validation.log
-                    '''
-                    archiveArtifacts artifacts: 'validation.log', allowEmptyArchive: true
-                    junit testResults: 'test-results/*.xml', allowEmptyResults: true
-
-                    def exitCode = sh(
-                        script: "kubectl get pod '${podName}' -n '${k8sNamespace}' -o jsonpath='{.status.containerStatuses[?(@.name==\"validation\")].state.terminated.exitCode}'",
-                        returnStdout: true
-                    ).trim()
-
-                    currentBuild.description = "job=${jobName}, pod=${podName}, exit=${exitCode ?: 'n/a'}"
-
-                    if (!exitCode) {
-                        def failReason = sh(
-                            script: "kubectl get job '${jobName}' -n '${k8sNamespace}' -o jsonpath='{.status.conditions[?(@.type==\"Failed\")].reason}'",
-                            returnStdout: true
-                        ).trim()
-                        error("No exit code found for pod ${podName}${failReason ? " (reason: ${failReason})" : ""}")
-                    }
-
-                    if (exitCode != '0') {
-                        error("Validation failed with exit code ${exitCode}")
-                    }
+                if (exitCode != '0') {
+                    error("Validation failed with exit code ${exitCode}")
                 }
             }
         }
