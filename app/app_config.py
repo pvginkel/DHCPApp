@@ -44,8 +44,20 @@ class AppSettings(BaseModel):
         if env is None:
             env = AppEnvironment()
 
+        dnsmasq_config_file_path = env.DNSMASQ_CONFIG_FILE_PATH
+        root_path = env.ROOT_PATH
         update_mac_vendor = env.UPDATE_MAC_VENDOR_DATABASE
         dev_fake = env.DEV_FAKE_LEASE_CHANGES
+
+        if flask_env == "testing":
+            test_dir = str(_PROJECT_ROOT / "tests")
+            if "DNSMASQ_CONFIG_FILE_PATH" not in env.model_fields_set:
+                dnsmasq_config_file_path = "/data/dnsmasq.conf"
+            if "ROOT_PATH" not in env.model_fields_set:
+                root_path = test_dir
+            update_mac_vendor = False
+            dev_fake = False
+
         if flask_env == "development":
             if "UPDATE_MAC_VENDOR_DATABASE" not in env.model_fields_set:
                 update_mac_vendor = False
@@ -53,8 +65,8 @@ class AppSettings(BaseModel):
                 dev_fake = True
 
         return cls(
-            dnsmasq_config_file_path=env.DNSMASQ_CONFIG_FILE_PATH,
-            root_path=env.ROOT_PATH,
+            dnsmasq_config_file_path=dnsmasq_config_file_path,
+            root_path=root_path,
             update_mac_vendor_database=update_mac_vendor,
             dev_fake_lease_changes=dev_fake,
         )
