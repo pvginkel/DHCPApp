@@ -76,72 +76,76 @@ podTemplate(inheritFrom: 'jenkins-agent kaniko', containers: [
 
         stage('Run validation') {
             container('k8s') {
-                kubectl.startJob("""
-                    apiVersion: batch/v1
-                    kind: Job
-                    metadata:
-                      name: ${jobName}
-                      namespace: ${k8sNamespace}
-                      labels:
-                        app.kubernetes.io/name: dhcpapp-validation
-                        app.kubernetes.io/managed-by: jenkins
-                        jenkins/build-number: "${BUILD_NUMBER}"
-                    spec:
-                      backoffLimit: 0
-                      activeDeadlineSeconds: 3600
-                      ttlSecondsAfterFinished: 3600
-                      template:
+                try {
+                    kubectl.startJob("""
+                        apiVersion: batch/v1
+                        kind: Job
+                        metadata:
+                          name: ${jobName}
+                          namespace: ${k8sNamespace}
+                          labels:
+                            app.kubernetes.io/name: dhcpapp-validation
+                            app.kubernetes.io/managed-by: jenkins
+                            jenkins/build-number: "${BUILD_NUMBER}"
                         spec:
-                          restartPolicy: Never
-                          containers:
-                            - name: validation
-                              image: registry:5000/dhcpapp-validation:${currentBuild.number}
-                              imagePullPolicy: Always
-                """.stripIndent())
+                          backoffLimit: 0
+                          activeDeadlineSeconds: 3600
+                          ttlSecondsAfterFinished: 3600
+                          template:
+                            spec:
+                              restartPolicy: Never
+                              containers:
+                                - name: validation
+                                  image: registry:5000/dhcpapp-validation:${currentBuild.number}
+                                  imagePullPolicy: Always
+                    """.stripIndent())
 
-                kubectl.waitForJob(jobName, k8sNamespace)
+                    kubectl.waitForJob(jobName, k8sNamespace)
 
-                def podName = kubectl.getJobPodName(jobName, k8sNamespace)
-                kubectl.savePodLogs(podName, 'validation', k8sNamespace, 'validation-raw.log')
+                    def podName = kubectl.getJobPodName(jobName, k8sNamespace)
+                    kubectl.savePodLogs(podName, 'validation', k8sNamespace, 'validation-raw.log')
 
-                sh '''
-                    set -euo pipefail
+                    sh '''
+                        set -euo pipefail
 
-                    mkdir -p test-results
+                        mkdir -p test-results
 
-                    awk '
-                        /^===JUNIT:.*===$/ {
-                            fname = $0
-                            sub(/^===JUNIT:/, "", fname)
-                            sub(/===$/, "", fname)
-                            content = ""
-                            capture = 1
-                            next
-                        }
-                        /^===JUNIT_END===$/ {
-                            print content | "base64 -d > test-results/" fname
-                            close("base64 -d > test-results/" fname)
-                            capture = 0
-                            next
-                        }
-                        capture { content = content (content ? "\\n" : "") $0 }
-                        !capture { print }
-                    ' validation-raw.log > validation.log
-                '''
-                archiveArtifacts artifacts: 'validation.log', allowEmptyArchive: true
-                junit testResults: 'test-results/*.xml', allowEmptyResults: true
+                        awk '
+                            /^===JUNIT:.*===$/ {
+                                fname = $0
+                                sub(/^===JUNIT:/, "", fname)
+                                sub(/===$/, "", fname)
+                                content = ""
+                                capture = 1
+                                next
+                            }
+                            /^===JUNIT_END===$/ {
+                                print content | "base64 -d > test-results/" fname
+                                close("base64 -d > test-results/" fname)
+                                capture = 0
+                                next
+                            }
+                            capture { content = content (content ? "\\n" : "") $0 }
+                            !capture { print }
+                        ' validation-raw.log > validation.log
+                    '''
+                    archiveArtifacts artifacts: 'validation.log', allowEmptyArchive: true
+                    junit testResults: 'test-results/*.xml', allowEmptyResults: true
 
-                def exitCode = kubectl.getContainerExitCode(podName, 'validation', k8sNamespace)
-                def failReason = kubectl.getJobFailReason(jobName, k8sNamespace)
+                    def exitCode = kubectl.getContainerExitCode(podName, 'validation', k8sNamespace)
+                    def failReason = kubectl.getJobFailReason(jobName, k8sNamespace)
 
-                currentBuild.description = "job=${jobName}, pod=${podName}, exit=${exitCode ?: 'n/a'}"
+                    currentBuild.description = "job=${jobName}, pod=${podName}, exit=${exitCode ?: 'n/a'}"
 
-                if (!exitCode) {
-                    error("No exit code found for pod ${podName}${failReason ? " (reason: ${failReason})" : ""}")
-                }
+                    if (!exitCode) {
+                        error("No exit code found for pod ${podName}${failReason ? " (reason: ${failReason})" : ""}")
+                    }
 
-                if (exitCode != '0') {
-                    error("Validation failed with exit code ${exitCode}")
+                    if (exitCode != '0') {
+                        error("Validation failed with exit code ${exitCode}")
+                    }
+                } finally {
+                    kubectl.deleteJob(jobName, k8sNamespace)
                 }
             }
         }
