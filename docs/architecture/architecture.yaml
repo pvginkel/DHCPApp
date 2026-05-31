@@ -1,0 +1,63 @@
+schemaVersion: "0.1"
+producer: dhcpapp
+
+applicationComponents:
+  - id: app:dhcpapp,4396ad25-8251-4429-a154-3f8c11a8b6fc
+    label: DHCP Monitoring App
+    summary: Backend for the homelab DHCP management app — reads dnsmasq lease/config data and streams real-time updates over a REST API and SSE.
+    introduced: 2025-08-16
+    lifecycle: active
+    stereotype: SoftwareProduct
+    sourceRepository: git:pvginkel/DHCPApp
+    stats:
+      image: registry:5000/dhcpapp
+
+applicationServices:
+  - id: svc:dhcpapp-api,a5f9d4f7-2ee8-4c14-bf89-b59054699d5f
+    label: DHCP App API
+    summary: HTTP API exposing DHCP leases, pools and pool usage, plus task management, for the DHCP app frontend.
+    introduced: 2025-08-16
+    lifecycle: active
+
+  - id: svc:ieee-oui,b7f68b34-230a-4dd8-ae1b-2d6f8b096d71
+    label: IEEE OUI Registry
+    summary: Public IEEE OUI (Organizationally Unique Identifier) database the app downloads to resolve MAC-address vendors.
+    introduced: 2025-08-16
+    lifecycle: active
+    stats:
+      homepage: https://standards-oui.ieee.org/
+
+applicationInterfaces:
+  - id: if:dhcpapp-spa,bf6ad452-927a-41d5-a1fc-e28c22101554
+    label: DHCP App API (SPA)
+    summary: REST + SSE surface consumed by the DHCP app single-page frontend.
+    introduced: 2025-08-16
+    lifecycle: active
+
+relations:
+  - id: rel:dhcpapp-realizes-api
+    source: app:dhcpapp,4396ad25-8251-4429-a154-3f8c11a8b6fc
+    target: svc:dhcpapp-api,a5f9d4f7-2ee8-4c14-bf89-b59054699d5f
+    type: Realization
+
+  - id: rel:dhcpapp-spa-interface
+    source: if:dhcpapp-spa,bf6ad452-927a-41d5-a1fc-e28c22101554
+    target: svc:dhcpapp-api,a5f9d4f7-2ee8-4c14-bf89-b59054699d5f
+    type: Assignment
+
+  - id: rel:dhcpapp-consumes-ssegateway
+    source: app:dhcpapp,4396ad25-8251-4429-a154-3f8c11a8b6fc
+    target: svc:ssegateway,59a7d043-bb0c-4e44-a8b8-3e943338f807
+    type: Association
+    boundBy: "env:SSE_GATEWAY_URL"
+
+  - id: rel:dhcpapp-consumes-iam
+    source: app:dhcpapp,4396ad25-8251-4429-a154-3f8c11a8b6fc
+    target: cap:iam
+    type: Association
+    boundBy: "env:OIDC_ISSUER_URL"
+
+  - id: rel:dhcpapp-consumes-ieee-oui
+    source: app:dhcpapp,4396ad25-8251-4429-a154-3f8c11a8b6fc
+    target: svc:ieee-oui,b7f68b34-230a-4dd8-ae1b-2d6f8b096d71
+    type: Association
