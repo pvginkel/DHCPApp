@@ -24,7 +24,7 @@ podTemplate(inheritFrom: 'jenkins-agent kaniko') {
         }
 
         stage('Start validation') {
-            build job: 'DHCPAppValidation',
+            build job: 'DHCP/DHCPAppValidation',
                 wait: false,
                 parameters: [
                     string(name: 'BACKEND_BUILD', value: "${currentBuild.number}"),
