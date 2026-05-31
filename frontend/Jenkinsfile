@@ -5,9 +5,7 @@ library('JenkinsPipelineUtils') _
 podTemplate(inheritFrom: 'jenkins-agent kaniko') {
     node(POD_LABEL) {
         stage('Clone repo') {
-            git branch: 'main',
-                credentialsId: '5f6fbd66-b41c-405f-b107-85ba6fd97f10',
-                url: 'https://github.com/pvginkel/DHCPAppUI.git'
+            checkout scm
         }
 
         stage('Build dhcp-app') {
