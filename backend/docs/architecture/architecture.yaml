@@ -58,7 +58,7 @@ relations:
     type: Association
     boundBy: "env:OIDC_ISSUER_URL"
 
-  - id: rel:dhcpapp-consumes-ieee-oui
-    source: app:dhcpapp,4396ad25-8251-4429-a154-3f8c11a8b6fc
-    target: svc:ieee-oui,b7f68b34-230a-4dd8-ae1b-2d6f8b096d71
-    type: Association
+  - id: rel:ieee-oui-serves-dhcpapp
+    source: svc:ieee-oui,b7f68b34-230a-4dd8-ae1b-2d6f8b096d71
+    target: app:dhcpapp,4396ad25-8251-4429-a154-3f8c11a8b6fc
+    type: Serving
