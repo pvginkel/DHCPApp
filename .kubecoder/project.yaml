@@ -3,7 +3,7 @@ projects:
     description: >-
       DHCPApp monorepo — orchestration tooling (the suite runner), the shared
       Procfile.dev dev stack, and CI.
-    jenkins: DHCPApp/DHCPApp
+    jenkins: DHCP/DHCPApp
     setup: cexec modern-app poetry install --no-interaction
     test: cexec modern-app poetry run run-suite
 
