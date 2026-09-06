@@ -1,0 +1,23 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v0.18.1
+_src_path: ../../ModernAppTemplate/frontend
+author_email: pieter@example.com
+author_name: Pieter
+backend_image_name: registry:5000/dhcpapp
+backend_jenkins_job: DHCPApp
+backend_port: 3301
+backend_repo_url: https://github.com/pvginkel/DHCPApp.git
+frontend_jenkins_job: DHCPAppUI
+frontend_port: 3300
+generate_validation_pipeline: true
+image_name: registry:5000/dhcpapp-ui
+project_description: Real-time DHCP lease monitoring for homelab environments
+project_name: dhcp-app
+project_title: DHCP Monitor
+repo_url: https://github.com/pvginkel/DHCPAppUI.git
+sse_gateway_port: 3302
+use_app_shell: true
+use_oidc: true
+use_sse: true
+validation_image_name: registry:5000/dhcpapp-validation
+validation_jenkins_job: DHCPAppValidation

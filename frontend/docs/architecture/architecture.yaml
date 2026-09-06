@@ -1,0 +1,54 @@
+schemaVersion: "0.1"
+producer: dhcpapp-ui
+
+applicationComponents:
+  - id: app:dhcpapp-ui,56e0795a-4140-40b6-84b3-7a2efb3bc9f5
+    label: DHCP Monitoring UI
+    summary: React single-page web UI for the homelab DHCP app — renders the live DHCP lease table with real-time updates, served as static assets behind NGINX.
+    introduced: 2025-08-17
+    lifecycle: active
+    stereotype: SoftwareProduct
+    sourceRepository: git:pvginkel/DHCPAppUI
+    stats:
+      image: registry:5000/dhcpapp-ui
+
+applicationServices:
+  - id: svc:dhcpapp-ui-web,b7228a02-7a61-4b43-aea7-6cb2f14b9471
+    label: DHCP App Web UI
+    summary: The single-page web application served over HTTP to browsers, providing the DHCP lease monitoring interface.
+    introduced: 2025-08-17
+    lifecycle: active
+
+applicationInterfaces:
+  - id: if:dhcpapp-ui-browser,79151ce4-b985-4896-ac92-bffe5f211a24
+    label: DHCP App Web UI (browser)
+    summary: HTTP surface delivering the SPA assets to the end-user's browser.
+    introduced: 2025-08-17
+    lifecycle: active
+
+relations:
+  - id: rel:dhcpapp-ui-realizes-web
+    source: app:dhcpapp-ui,56e0795a-4140-40b6-84b3-7a2efb3bc9f5
+    target: svc:dhcpapp-ui-web,b7228a02-7a61-4b43-aea7-6cb2f14b9471
+    type: Realization
+
+  - id: rel:dhcpapp-ui-browser-interface
+    source: if:dhcpapp-ui-browser,79151ce4-b985-4896-ac92-bffe5f211a24
+    target: svc:dhcpapp-ui-web,b7228a02-7a61-4b43-aea7-6cb2f14b9471
+    type: Assignment
+
+  # Frontend -> backend: the SPA consumes the DHCP App REST API.
+  # Cross-producer ref to dhcpapp's ApplicationService (resolved from its
+  # local checkout; dangles until dhcpapp publishes its first build).
+  - id: rel:dhcpapp-ui-consumes-api
+    source: app:dhcpapp-ui,56e0795a-4140-40b6-84b3-7a2efb3bc9f5
+    target: svc:dhcpapp-api,a5f9d4f7-2ee8-4c14-bf89-b59054699d5f
+    type: Association
+
+  # Frontend -> SSE gateway: the SPA opens an EventSource to /api/sse/stream
+  # (nginx-proxied to the gateway) to receive real-time lease updates.
+  # Cross-producer ref to the ssegateway ApplicationService.
+  - id: rel:dhcpapp-ui-consumes-ssegateway
+    source: app:dhcpapp-ui,56e0795a-4140-40b6-84b3-7a2efb3bc9f5
+    target: svc:ssegateway,59a7d043-bb0c-4e44-a8b8-3e943338f807
+    type: Association

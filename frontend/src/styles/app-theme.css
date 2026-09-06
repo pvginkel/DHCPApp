@@ -1,0 +1,86 @@
+/**
+ * App-specific theme overrides for DHCP Monitor.
+ * Lease flash animations for real-time update visualization.
+ */
+
+@layer components {
+  .lease-flash-added {
+    animation: leaseFlashAdded 1s ease-out;
+  }
+
+  .lease-flash-updated {
+    animation: leaseFlashUpdated 1s ease-out;
+  }
+
+  .lease-flash-removing {
+    animation: leaseFlashRemoving 1s ease-out;
+  }
+}
+
+@keyframes leaseFlashAdded {
+  0% {
+    background-color: hsl(142 60% 90%);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes leaseFlashUpdated {
+  0% {
+    background-color: hsl(220 60% 90%);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes leaseFlashRemoving {
+  0% {
+    background-color: hsl(0 60% 90%);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .lease-flash-added {
+    animation: leaseFlashAddedDark 1s ease-out;
+  }
+
+  .lease-flash-updated {
+    animation: leaseFlashUpdatedDark 1s ease-out;
+  }
+
+  .lease-flash-removing {
+    animation: leaseFlashRemovingDark 1s ease-out;
+  }
+}
+
+@keyframes leaseFlashAddedDark {
+  0% {
+    background-color: hsl(142 30% 20%);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes leaseFlashUpdatedDark {
+  0% {
+    background-color: hsl(220 30% 20%);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes leaseFlashRemovingDark {
+  0% {
+    background-color: hsl(0 30% 20%);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
