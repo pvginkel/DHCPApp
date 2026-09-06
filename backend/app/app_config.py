@@ -59,6 +59,14 @@ class AppSettings(BaseModel):
             dev_fake = False
 
         if flask_env == "development":
+            # Mirror the testing branch: point at the sample dnsmasq tree the
+            # repo ships (backend/data/), so a plain checkout runs without a
+            # .env. ROOT_PATH already defaults to the backend directory, and
+            # DhcpService resolves the path under it, so "/data/dnsmasq.conf"
+            # becomes backend/data/dnsmasq.conf. Production is untouched and
+            # keeps /etc/dnsmasq.conf, which its container mounts.
+            if "DNSMASQ_CONFIG_FILE_PATH" not in env.model_fields_set:
+                dnsmasq_config_file_path = "/data/dnsmasq.conf"
             if "UPDATE_MAC_VENDOR_DATABASE" not in env.model_fields_set:
                 update_mac_vendor = False
             if "DEV_FAKE_LEASE_CHANGES" not in env.model_fields_set:
