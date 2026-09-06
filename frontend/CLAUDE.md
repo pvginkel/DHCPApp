@@ -4,15 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
+### Running commands in this environment
+This repo runs inside a KubeCoder pod where pnpm and Node live in the `modern-app` tool container, not the main dev container. The curated verbs are `kc project setup|build|test|lint [--project FRONTEND]`, run from the repo root. Ad-hoc commands are prefixed with `cexec modern-app` (e.g. `cexec modern-app pnpm check`). The whole dev stack (backend + frontend + SSE gateway) starts together with `scripts/dev.py` from the repo root.
+
 ### Essential Commands
-- `pnpm dev` - Start development server on port 3000
-- `pnpm build` - Build for production (includes API generation and type checking)
-- `pnpm lint` - Run ESLint
-- `pnpm type-check` - Run TypeScript type checking
+- `pnpm dev` - Start development server on port 3300
+- `pnpm build` - Build for production (also runs API generation, route generation and `pnpm check`)
+- `pnpm check` - Run the full check gate: ESLint, TypeScript, knip
+- `pnpm check:lint` / `pnpm check:type-check` / `pnpm check:knip` - Run the individual checks
+- `pnpm playwright test` - Run the Playwright end-to-end suite
 - `pnpm generate:api` - Generate API client from OpenAPI spec (requires backend running)
 
 ### API Generation
-- API client is auto-generated from OpenAPI spec at backend `/api/apidoc/openapi.json`
+- API client is auto-generated from OpenAPI spec at backend `/api/docs/openapi.json`
 - Generated files are in `src/lib/api/generated/` and excluded from git
 - Always run `pnpm generate:api` before development when backend changes
 - **Important**: Backend only runs on IPv4 - use `curl -4` when testing endpoints manually
@@ -95,10 +99,10 @@ src/
 
 ## Development Workflow
 
-1. Start backend server first (required for API generation)
+1. Start backend server first (only needed for `pnpm generate:api`; `scripts/dev.py` from the repo root starts backend, frontend and gateway together)
 2. Run `pnpm generate:api` to generate current API client
 3. Start development with `pnpm dev`
-4. Run linting and type checking before commits
+4. Run `pnpm check` before commits
 
 ## Environment Configuration
 
@@ -106,12 +110,12 @@ src/
 - The frontend always uses `/api` as the API base URL (relative path)
 - In development, Vite's proxy forwards `/api` requests to the backend (configured in `vite.config.ts`)
 - In production, NGINX proxies `/api` to the backend
-- Development server runs on port 3000 with auto-open browser
+- Development server runs on port 3300 and does not auto-open a browser
 - Build output goes to `dist/` directory
 
 ### Backend URL for Dev Proxy and API Generation
-- `BACKEND_URL` - Backend host for Vite dev proxy and OpenAPI generation (defaults to `http://localhost:5000`)
-- `SSE_GATEWAY_URL` - SSE gateway host for Vite dev proxy (defaults to `http://localhost:3001`)
+- `BACKEND_URL` - Backend host for Vite dev proxy and OpenAPI generation (defaults to `http://localhost:3301`)
+- `SSE_GATEWAY_URL` - SSE gateway host for Vite dev proxy (defaults to `http://localhost:3302`)
 - Set these in your environment or `.env.local` if the backend is on a different host
 
 ## Command Templates
@@ -127,7 +131,7 @@ Use these files when the user asks you to perform the applicable action.
 
 ## Testing
 
-No test framework is currently configured. When adding tests, follow the established patterns and update this documentation.
+There is a full Playwright end-to-end test suite. Config lives at `playwright.config.ts` and specs live under `tests/`. The suite boots its own backend, frontend and SSE gateway per worker on free ports, so nothing needs starting first. Run it with `pnpm playwright test`, or `kc project test --project FRONTEND` from the repo root. There is one `chromium` project running with 2 workers. Tests tagged `@slow` are excluded unless `INCLUDE_SLOW_TESTS` is set. Follow the established patterns and update this documentation when adding tests.
 ## Federated architecture model
 
 We take part in a federated Architecture-as-Code model. The architecture for this repository is maintained in `docs/architecture/architecture.yaml`. Whenever a change is made in this repo that could impact an Enterprise Architecture / ArchiMate model modeling everything owned by this repo, nudge the user to spawn the `update-architecture` agent. The agent is incremental, so it's not a hard requirement that it runs on every change. Nudge a bit harder when significant changes are made (new managed host, new daemon, removed service, renamed external identity). When you are performing work unattended, feel free to invoke the agent yourself.
