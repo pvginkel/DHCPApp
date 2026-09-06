@@ -1,4 +1,4 @@
-# Seed notes — `dhcpapp-ui` producer
+# Seed notes — `dhcpapp` producer (frontend artifact)
 
 First architecture artifact for the DHCP Monitoring UI (the web frontend for
 DHCPApp). Hand-authored mode (the YAML is the source of truth). Headless seed —
@@ -6,7 +6,8 @@ modeling decisions made without operator triage; open questions logged below.
 
 ## Identity (fixed by task brief, not re-derived)
 
-- Producer id: `dhcpapp-ui`
+- Producer id: `dhcpapp`. This artifact is the frontend half of the
+  monorepo's single producer, alongside `backend/docs/architecture/architecture.yaml`.
 - `introduced` on every element: **2025-08-17** (this repo's first commit,
   `git log --reverse --format=%ad --date=short | head -1`).
 
@@ -14,7 +15,7 @@ modeling decisions made without operator triage; open questions logged below.
 
 | id | label | notes |
 |---|---|---|
-| `app:dhcpapp-ui,56e0795a-4140-40b6-84b3-7a2efb3bc9f5` | DHCP Monitoring UI | «SoftwareProduct», `sourceRepository: git:pvginkel/DHCPAppUI`, image `registry:5000/dhcpapp-ui`. |
+| `app:dhcpapp-ui,56e0795a-4140-40b6-84b3-7a2efb3bc9f5` | DHCP Monitoring UI | «SoftwareProduct», `sourceRepository: git:pvginkel/DHCPApp`, image `registry:5000/dhcpapp-ui`. |
 | `svc:dhcpapp-ui-web,b7228a02-7a61-4b43-aea7-6cb2f14b9471` | DHCP App Web UI | The SPA served over HTTP to browsers. |
 | `if:dhcpapp-ui-browser,79151ce4-b985-4896-ac92-bffe5f211a24` | DHCP App Web UI (browser) | End-user browser consumer of the web UI. |
 
@@ -36,9 +37,9 @@ A presentation-layer SPA realizes no capability from the enum.
 1. **Frontend → backend API** (required by brief).
    `app:dhcpapp-ui —Association→ svc:dhcpapp-api,a5f9d4f7-2ee8-4c14-bf89-b59054699d5f`.
    The SPA calls `/api/dhcp/leases`, `/api/dhcp/pools`, `/api/auth/...` etc.
-   (relative paths; `src/lib/api/*.ts`). Cross-producer ref to `dhcpapp`'s
-   ApplicationService, resolved from its local checkout
-   (`../DHCPApp/docs/architecture/architecture.yaml`).
+   (relative paths; `src/lib/api/*.ts`). Same-producer ref to `dhcpapp`'s
+   ApplicationService, resolved from the sibling directory in this monorepo
+   (`backend/docs/architecture/architecture.yaml`).
 
 2. **Frontend → SSE gateway** (genuine, added).
    `app:dhcpapp-ui —Association→ svc:ssegateway,59a7d043-bb0c-4e44-a8b8-3e943338f807`.
@@ -68,13 +69,16 @@ legitimate edge but carries no `boundBy`. Omitted on both.
   call. No real external SaaS dependency found (`grep -rIi '://' src` clean).
 - `version.json` / git-rev — build provenance, not an architecture element.
 
-## Cross-producer references (dangling until siblings publish)
-- `svc:dhcpapp-api,a5f9d4f7-2ee8-4c14-bf89-b59054699d5f` — owned by producer
-  `dhcpapp` (local checkout; not yet published). Validator does not check
-  cross-producer refs; will dangle in `validation-report.json` until DHCPApp's
-  first build registers — reported, not failing.
+## Cross-producer reference (dangling until sibling publishes)
 - `svc:ssegateway,59a7d043-bb0c-4e44-a8b8-3e943338f807` — owned by producer
-  for the SSE gateway. Same dangling caveat.
+  for the SSE gateway. Validator does not check cross-producer refs; will
+  dangle in `validation-report.json` until the SSE gateway's first build
+  registers — reported, not failing.
+
+`svc:dhcpapp-api,a5f9d4f7-2ee8-4c14-bf89-b59054699d5f` is no longer listed
+here: it is owned by this same `dhcpapp` producer, declared in
+`backend/docs/architecture/architecture.yaml` in this same repo, and
+published by the same Jenkins job — it no longer dangles.
 
 ## Open questions for the operator
 - **Exposed web service modeling**: I modeled the SPA's served web surface as

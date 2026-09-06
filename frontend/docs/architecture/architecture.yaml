@@ -1,5 +1,9 @@
+# Architecture artifact for the DHCP Monitoring UI — the frontend half of the
+# DHCPApp monorepo. One repo publishes one producer: this file and
+# backend/docs/architecture/architecture.yaml both declare `dhcpapp` and are
+# collected into that producer's directory by the same Jenkins job.
 schemaVersion: "0.1"
-producer: dhcpapp-ui
+producer: dhcpapp
 
 applicationComponents:
   - id: app:dhcpapp-ui,56e0795a-4140-40b6-84b3-7a2efb3bc9f5
@@ -8,7 +12,7 @@ applicationComponents:
     introduced: 2025-08-17
     lifecycle: active
     stereotype: SoftwareProduct
-    sourceRepository: git:pvginkel/DHCPAppUI
+    sourceRepository: git:pvginkel/DHCPApp
     stats:
       image: registry:5000/dhcpapp-ui
 
@@ -38,8 +42,8 @@ relations:
     type: Assignment
 
   # Frontend -> backend: the SPA consumes the DHCP App REST API.
-  # Cross-producer ref to dhcpapp's ApplicationService (resolved from its
-  # local checkout; dangles until dhcpapp publishes its first build).
+  # Same-producer ref now that backend and frontend are one repo: the target is
+  # declared in backend/docs/architecture/architecture.yaml under `dhcpapp`.
   - id: rel:dhcpapp-ui-consumes-api
     source: app:dhcpapp-ui,56e0795a-4140-40b6-84b3-7a2efb3bc9f5
     target: svc:dhcpapp-api,a5f9d4f7-2ee8-4c14-bf89-b59054699d5f
