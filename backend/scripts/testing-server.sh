@@ -10,8 +10,10 @@ BACKEND_DIR="$(dirname "$SCRIPT_DIR")"
 
 echo $BACKEND_DIR
 
-# Load shared variables
-. "$SCRIPT_DIR/args.sh"
+# Default testing port. This used to come from scripts/args.sh, the docker
+# helper deleted with the rest of that chain (images are built by Jenkins with
+# kaniko). Playwright always passes an explicit free port with --port.
+TESTING_BACKEND_PORT=3311
 
 # Change to backend directory
 cd "$BACKEND_DIR" || {
