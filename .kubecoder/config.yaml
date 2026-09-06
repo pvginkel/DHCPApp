@@ -7,8 +7,15 @@
 # No data-store sidecars: the backend reads dnsmasq lease and config files off
 # disk (DNSMASQ_CONFIG_FILE_PATH in backend/.env), and the app has no database
 # and no object store.
+#
+# No imageBuilder: both Dockerfiles are built by Jenkins with helmCharts.kaniko(...),
+# and nothing builds an image from inside this environment.
 
-cwd: DHCPApp
+repos:
+  # The AI workflow's spec repository, shared across every environment that
+  # works on DHCPApp. Registered here so /dev:onboard finds it already cloned.
+  - url: https://github.com/pvginkel/DHCPAppSpecs
+    shared: true
 
 capabilities:
   github: rw

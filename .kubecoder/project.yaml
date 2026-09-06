@@ -3,9 +3,18 @@ projects:
     description: >-
       DHCPApp monorepo — orchestration tooling (the suite runner), the shared
       Procfile.dev dev stack, and CI.
+    # The build/deploy pipeline (Jenkinsfile). The repo has a second job,
+    # AaC/DHCPApp, driven by Jenkinsfile.architecture — it validates the two
+    # docs/architecture/*.yaml artifacts and publishes one `dhcpapp` producer.
     jenkins: DHCP/DHCPApp
     setup: cexec modern-app poetry install --no-interaction
-    test: cexec modern-app poetry run run-suite
+    # No `test:` here on purpose. The root project owns `run-suite`
+    # (tools/suite_runner), which is CI's single entry point and runs the
+    # backend and frontend suites itself — declaring it here would make
+    # `kc project test` run both suites two extra times. The per-component
+    # verbs below are those same two suites, once each. CI keeps using
+    # `poetry run run-suite` because it also needs the JUnit XML, the retries
+    # and the ===SUITE_RESULT:=== markers the Jenkinsfile parses.
 
   backend:
     description: >-
@@ -13,6 +22,9 @@ projects:
       pools and pool usage, and streams lease changes over SSE.
     setup: cexec modern-app poetry install --no-interaction
     test: cexec modern-app poetry run pytest
+    # The same three checks backend/scripts/check.py runs, which is this
+    # subproject's own convention. CI never runs them, so they are red on a
+    # clean checkout (1 ruff + 27 mypy findings, all pre-dating onboarding).
     lint:
       - cexec modern-app poetry run ruff check .
       - cexec modern-app poetry run mypy .
@@ -25,6 +37,8 @@ projects:
     setup:
       - cexec modern-app pnpm install --frozen-lockfile --config.confirmModulesPurge=false
       - cexec modern-app pnpm playwright install chromium
+    # `pnpm build` also runs `pnpm check`; the lint verb below repeats it so the
+    # gate stands on its own.
     build: cexec modern-app pnpm build
     test: cexec modern-app pnpm playwright test
     lint: cexec modern-app pnpm check
