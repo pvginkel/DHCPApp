@@ -5,8 +5,9 @@
 # so a single command needs both toolsets in the same container.
 #
 # No data-store sidecars: the backend reads dnsmasq lease and config files off
-# disk (DNSMASQ_CONFIG_FILE_PATH in backend/.env), and the app has no database
-# and no object store.
+# disk, and the app has no database and no object store. Development and testing
+# both default DNSMASQ_CONFIG_FILE_PATH to the sample tree the repo ships, so no
+# .env and no `env:` block is needed here.
 #
 # No imageBuilder: both Dockerfiles are built by Jenkins with helmCharts.kaniko(...),
 # and nothing builds an image from inside this environment.
