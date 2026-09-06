@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "dhcp-app"
+version = "0.1.0"
+description = "REST API and web UI for monitoring dnsmasq DHCP leases in a homelab"
+authors = ["Pieter van Ginkel <pvginkel@gmail.com>"]
+packages = [{include = "tools"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+honcho = "^2"
+psutil = "^5"
+
+[tool.poetry.scripts]
+run-suite = "tools.suite_runner.local:cli"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

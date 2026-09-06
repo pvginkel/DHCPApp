@@ -1,0 +1,32 @@
+# KubeCoder environment manifest for the DHCPApp monorepo.
+#
+# One sidecar rather than `python` + `frontend`: the Playwright harness boots the
+# Flask backend and the SSE gateway per worker (frontend/tests/support/process/servers.ts),
+# so a single command needs both toolsets in the same container.
+#
+# No data-store sidecars: the backend reads dnsmasq lease and config files off
+# disk (DNSMASQ_CONFIG_FILE_PATH in backend/.env), and the app has no database
+# and no object store.
+
+cwd: DHCPApp
+
+capabilities:
+  github: rw
+
+tools:
+  - use: modern-app
+
+ports:
+  - name: frontend
+    port: 3300
+    type: http
+    sslOffload: true
+  - name: backend
+    port: 3301
+    type: http
+  - name: sse-gateway
+    port: 3302
+    type: http
+
+setup:
+  - kc project setup
