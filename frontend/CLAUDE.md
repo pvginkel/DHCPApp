@@ -118,16 +118,11 @@ src/
 - `SSE_GATEWAY_URL` - SSE gateway host for Vite dev proxy (defaults to `http://localhost:3302`)
 - Set these in your environment or `.env.local` if the backend is on a different host
 
-## Command Templates
+## Product brief
 
-The repository includes command templates for specific development workflows:
+@docs/product_brief.md is the functional context for changes here; rewrite it with
+@docs/commands/create_brief.md.
 
-- When writing a product brief: @docs/commands/create_brief.md
-- When planning a new feature: @docs/commands/plan_feature.md
-- When doing code review: @docs/commands/code_review.md
-- When planning or implementing a new feature, reference the product brief at @docs/product_brief.md
-
-Use these files when the user asks you to perform the applicable action.
 
 ## Testing
 

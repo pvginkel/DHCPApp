@@ -94,16 +94,11 @@ The application implements dnsmasq's configuration parsing rules:
 - Write only necessary code - avoid scaffolding or "future-useful" helper methods
 - Don't start the Flask app automatically in development code
 
-## Command Templates
+## Product brief
 
-The repository includes command templates for specific development workflows:
+@docs/product_brief.md is the functional context for changes here; rewrite it with
+@docs/commands/create_brief.md.
 
-- When writing a product brief: @docs/commands/create_brief.md
-- When planning a new feature: @docs/commands/plan_feature.md
-- When doing code review: @docs/commands/code_review.md
-- When planning or implementing a new feature, reference the product brief at @docs/product_brief.md
-
-Use these files when the user asks you to perform the applicable action.
 ## Federated architecture model
 
 We take part in a federated Architecture-as-Code model. The architecture for this repository is maintained in `docs/architecture/architecture.yaml`. Whenever a change is made in this repo that could impact an Enterprise Architecture / ArchiMate model modeling everything owned by this repo, nudge the user to spawn the `update-architecture` agent. The agent is incremental, so it's not a hard requirement that it runs on every change. Nudge a bit harder when significant changes are made (new managed host, new daemon, removed service, renamed external identity). When you are performing work unattended, feel free to invoke the agent yourself.
