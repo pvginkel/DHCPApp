@@ -44,16 +44,7 @@ count is worth a sentence in the close-out even when it is green.
 kc project lint       # backend: ruff, mypy, vulture; frontend: pnpm check
 ```
 
-**`kc project lint` is known red**, and has been since before the pipeline: `backend/` carries one
-ruff finding (`UP015` in `backend/scripts/arch-validate.py`, auto-fixable) and 27 mypy errors, none
-caused by any slice. CI has never run these tools — the Jenkinsfile only runs `run-suite` — so they
-accumulated unchecked. There is **no tracker card for it yet**; it was reported in the onboarding
-close-out and is the operator's to schedule. Note that `kc project lint` stops at the first failing
-statement, so the mypy findings only become visible once ruff is clean.
-
-Do not treat the red as a regression from this slice. Do check that it has not *grown*, and if the
-slice touched the flagged files at all, that clearing them was in scope. Once the backend lint debt
-is paid, delete these two paragraphs.
+`kc project lint` must be green; no gate in this repo is known red, so a failure is this slice's.
 
 ## 2. The live check
 
