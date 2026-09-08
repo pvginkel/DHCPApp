@@ -8,6 +8,9 @@ projects:
     # docs/architecture/*.yaml artifacts and publishes one `dhcpapp` producer.
     jenkins: DHCP/DHCPApp
     setup: cexec modern-app poetry install --no-interaction
+    # The root's own Python only; backend/ and frontend/ lint themselves. The
+    # rule set and the Ruff version are pinned in the root pyproject.toml.
+    lint: cexec modern-app poetry run ruff check scripts tools
     # No `test:` here on purpose. The root project owns `run-suite`
     # (tools/suite_runner), which is CI's single entry point and runs the
     # backend and frontend suites itself — declaring it here would make
