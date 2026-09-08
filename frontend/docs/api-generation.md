@@ -77,10 +77,11 @@ function MyComponent() {
 
 ## Configuration
 
-Set the backend URL via environment variable:
+`BACKEND_URL` already defaults to `http://localhost:3301`; override it via
+environment variable to point elsewhere:
 
 ```bash
-BACKEND_URL=http://localhost:5000
+BACKEND_URL=http://localhost:3301
 ```
 
 ## Troubleshooting
@@ -88,16 +89,17 @@ BACKEND_URL=http://localhost:5000
 ### Backend Not Accessible
 
 ```bash
-# Make sure backend is running
-cd ../backend
-workon dhcp-backend
-python3 run.py
+# Start the whole dev stack (backend + frontend + SSE gateway), from the repo root
+cexec modern-app scripts/dev.py
+
+# ...or just the backend, from backend/
+cexec modern-app poetry run dev
 ```
 
 ### Generation Fails
 
-1. Check backend health: `curl http://localhost:5000/healthz`
-2. Verify OpenAPI spec: `curl http://localhost:5000/api/apidoc/openapi.json`
+1. Check backend health: `curl http://localhost:3301/health/healthz`
+2. Verify OpenAPI spec: `curl http://localhost:3301/api/docs/openapi.json`
 3. Check console output for specific error messages
 
 ### Type Errors

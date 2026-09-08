@@ -57,8 +57,8 @@ no tombstones for superseded conventions — rewrite the doc instead, per
 
 **Ground every claim in the shipped source.** A doc sentence that cannot be checked against the merged
 tree does not go in. This bites hardest in the frontend docs, which carry stale examples from before
-the current layout (`api-generation.md` still names a port and a virtualenv the repo no longer uses);
-when a slice makes you touch such a passage, fix what you touched — do not adopt the whole file.
+the current layout; when a slice makes you touch such a passage, fix what you touched — do not adopt
+the whole file.
 
 ## Gates
 
