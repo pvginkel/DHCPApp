@@ -1,0 +1,23 @@
+# kaniko reads .dockerignore from the build context root, and the backend is its
+# own context (Jenkinsfile: helmCharts.kaniko("backend/Dockerfile", "backend",
+# ...)). A .dockerignore at the repository root is never read for this build.
+#
+# Everything listed here is a path the Dockerfile does not COPY — it takes only
+# pyproject.toml, poetry.lock, the root-level *.py and app/ — so this file
+# cannot change what CI builds. It only stops the dev environment from
+# streaming its build and tool output to the builder: the lint and test gates
+# leave 13M+ of .mypy_cache behind, which CI never sees because it builds from
+# a clean clone.
+.git
+.venv
+**/__pycache__
+.mypy_cache
+.pytest_cache
+.ruff_cache
+.env
+.env.*
+tests
+docs
+.claude
+logs
+tmp
