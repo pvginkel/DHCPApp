@@ -4,7 +4,7 @@ import logging
 from datetime import UTC, datetime
 
 from dependency_injector.wiring import Provide, inject
-from flask import Blueprint, jsonify
+from flask import Blueprint, Response, jsonify
 
 from app.app_config import AppSettings
 from app.services.container import ServiceContainer
@@ -26,7 +26,7 @@ def notify_lease_change(
     dhcp_service: DhcpService = Provide[ServiceContainer.dhcp_service],
     sse_connection_manager: SSEConnectionManager = Provide[ServiceContainer.sse_connection_manager],
     app_settings: AppSettings = Provide[ServiceContainer.app_config],
-) -> tuple:
+) -> tuple[Response, int]:
     """Internal notification endpoint for lease file changes.
 
     Called by companion containers when dnsmasq lease file changes.

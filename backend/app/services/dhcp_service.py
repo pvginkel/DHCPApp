@@ -5,6 +5,7 @@ import os
 import re
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from app.app_config import AppSettings
 from app.models.dhcp_lease import DhcpLease
@@ -257,7 +258,7 @@ class DhcpService:
         """Get all discovered DHCP pools."""
         return self.dhcp_pools.copy()
 
-    def get_pool_usage_statistics(self) -> list[dict]:
+    def get_pool_usage_statistics(self) -> list[dict[str, Any]]:
         """Calculate usage statistics for all pools."""
         statistics = []
 

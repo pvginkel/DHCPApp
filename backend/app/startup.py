@@ -28,7 +28,7 @@ def create_container() -> ServiceContainer:
 def register_blueprints(api_bp: Blueprint, app: Flask) -> None:
     """Register all app-specific blueprints."""
     # Register DHCP endpoints under /api/dhcp (OIDC-protected via api_bp)
-    if not api_bp._got_registered_once:  # type: ignore[attr-defined]
+    if not api_bp._got_registered_once:
         from app.api.dhcp import dhcp_bp
 
         api_bp.register_blueprint(dhcp_bp)

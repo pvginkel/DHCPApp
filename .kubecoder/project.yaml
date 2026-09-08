@@ -23,8 +23,8 @@ projects:
     setup: cexec modern-app poetry install --no-interaction
     test: cexec modern-app poetry run pytest
     # The same three checks backend/scripts/check.py runs, which is this
-    # subproject's own convention. CI never runs them, so they are red on a
-    # clean checkout (1 ruff + 27 mypy findings, all pre-dating onboarding).
+    # subproject's own convention. CI never runs them, so this verb is the
+    # only thing that does.
     lint:
       - cexec modern-app poetry run ruff check .
       - cexec modern-app poetry run mypy .

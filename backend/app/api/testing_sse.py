@@ -104,7 +104,7 @@ def start_test_task(
     payload = TaskStartRequestSchema.model_validate(request.get_json() or {})
 
     if payload.task_type == "demo_task":
-        task = _DemoTask()
+        task: BaseTask = _DemoTask()
     elif payload.task_type == "failing_task":
         task = _FailingTask()
     else:

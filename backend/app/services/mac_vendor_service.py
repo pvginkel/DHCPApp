@@ -36,7 +36,8 @@ class MacVendorService:
 
     def get_vendor(self, mac_address: str) -> str | None:
         try:
-            return self.lookup.lookup(mac_address)
+            vendor: str = self.lookup.lookup(mac_address)
+            return vendor
         except Exception as e:
             self.logger.debug(f"Vendor lookup failed for {mac_address}: {e}")
             return None

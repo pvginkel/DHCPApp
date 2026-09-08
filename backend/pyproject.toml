@@ -35,7 +35,6 @@ ruff = "^0.11.0"
 mypy = "^1.8.0"
 pytest = "^7.4.0"
 pytest-cov = "^4.1.0"
-types-flask = "^1.1.0"
 types-flask-cors = "^4.0.0"
 types-requests = "^2.31.0"
 types-waitress = "^3.0.1.20250801"
@@ -84,6 +83,16 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 warn_return_any = true
 strict_equality = true
+
+# Neither package ships inline types, and neither has a types-* distribution on
+# PyPI, so mypy has nothing to resolve them against.
+[[tool.mypy.overrides]]
+module = "mac_vendor_lookup"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "PIL.*"
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "vulture_whitelist"
