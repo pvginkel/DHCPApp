@@ -96,8 +96,7 @@ The application implements dnsmasq's configuration parsing rules:
 
 ## Product brief
 
-@docs/product_brief.md is the functional context for changes here; rewrite it with
-@docs/commands/create_brief.md.
+@docs/product_brief.md is the functional context for changes here.
 
 ## Federated architecture model
 
