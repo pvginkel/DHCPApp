@@ -97,8 +97,3 @@ The application implements dnsmasq's configuration parsing rules:
 ## Product brief
 
 @docs/product_brief.md is the functional context for changes here.
-
-## Federated architecture model
-
-This subproject's Architecture-as-Code artifact is `docs/architecture/architecture.yaml`. What the
-model is, which agents maintain it and when to run them are in the root `CLAUDE.md`.

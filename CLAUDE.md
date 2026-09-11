@@ -49,20 +49,6 @@ belongs in this file.
 
 Issue tracking follows the host convention; this project's owner tag is **`DHCPApp`**.
 
-## Federated architecture model
-
-This repo is one producer (`dhcpapp`) in a federated Architecture-as-Code model, with two
-hand-authored artifacts: `backend/docs/architecture/architecture.yaml` and
-`frontend/docs/architecture/architecture.yaml`. The `AaC/DHCPApp` job (`Jenkinsfile.architecture`)
-validates both.
-
-When a change here could affect an ArchiMate model of what this repo owns, nudge the operator to
-spawn the `update-architecture` agent; nudge harder for a new managed host, a new daemon, a removed
-service or a renamed external identity. The agent is incremental, so it need not run on every change,
-and when working unattended you may invoke it yourself. The tooling lives on the operator's
-filesystem, not in this repo: the `/seed-architecture` skill and the `update-architecture` agent, with
-`~/.claude/architecture/producer-manual.md` as the authoritative vocabulary reference.
-
 ## Key documentation
 
 - [`docs/change-discipline.md`](docs/change-discipline.md) — the rules every code change obeys.

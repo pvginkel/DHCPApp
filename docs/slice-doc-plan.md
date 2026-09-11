@@ -25,10 +25,8 @@ changed a cross-cutting thing, whichever side's code moved: `frontend/docs/api-g
 describes how the client is regenerated from it, and that description has to still be true.
 
 The `docs/architecture/architecture.yaml` artifacts under each subproject are the federated
-Architecture-as-Code model's, not this phase's. They are maintained by the `update-architecture`
-agent and validated by the `AaC/DHCPApp` job. If the slice added a daemon, a managed host, an
-external identity or a service — the changes that model notices — say so in the close-out so the
-agent gets run; do not hand-edit the YAML as part of a doc pass.
+Architecture-as-Code model's, not this phase's. They are validated by the `AaC/DHCPApp` job; do
+not hand-edit the YAML as part of a doc pass.
 
 ### 2. The reader-facing READMEs
 

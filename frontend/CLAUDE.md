@@ -126,8 +126,3 @@ src/
 ## Testing
 
 There is a full Playwright end-to-end test suite. Config lives at `playwright.config.ts` and specs live under `tests/`. The suite boots its own backend, frontend and SSE gateway per worker on free ports, so nothing needs starting first. Run it with `pnpm playwright test`, or `kc project test --project FRONTEND` from the repo root. There is one `chromium` project running with 2 workers. Tests tagged `@slow` are excluded unless `INCLUDE_SLOW_TESTS` is set. Follow the established patterns and update this documentation when adding tests.
-
-## Federated architecture model
-
-This subproject's Architecture-as-Code artifact is `docs/architecture/architecture.yaml`. What the
-model is, which agents maintain it and when to run them are in the root `CLAUDE.md`.
