@@ -35,6 +35,3 @@ ports:
   - name: sse-gateway
     port: 3302
     type: http
-
-setup:
-  - kc project setup
