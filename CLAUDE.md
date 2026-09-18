@@ -47,8 +47,6 @@ Code changes go through the `dev` plugin's slice workflow — `/dev:triage` → 
 the contract is `.aiworkflowrc` and `.kubecoder/project.yaml`; nothing the pipeline reads by machine
 belongs in this file.
 
-Issue tracking follows the host convention; this project's owner tag is **`DHCPApp`**.
-
 ## Key documentation
 
 - [`docs/change-discipline.md`](docs/change-discipline.md) — the rules every code change obeys.
