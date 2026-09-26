@@ -10,6 +10,3 @@ frame  # unused variable
 exc_type  # unused variable
 exc_val  # unused variable
 exc_tb  # unused variable
-
-# Function parameters kept for API compatibility
-encoding  # unused variable
