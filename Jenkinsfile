@@ -29,7 +29,7 @@ podTemplate(inheritFrom: 'jenkins-agent kaniko', containers: [
                 sh "tar czf /tmp/context.tar.gz --exclude=.git --exclude=node_modules --exclude=.venv --exclude=test-results --exclude=.pnpm-store ."
 
                 def suites = ['backend', 'frontend']
-                def jobName = "dhcpapp-validation-${BUILD_NUMBER}"
+                def jobName = "dhcp-app-validation-${BUILD_NUMBER}"
 
                 try {
                     kubectl.startJob("""\
@@ -39,7 +39,7 @@ podTemplate(inheritFrom: 'jenkins-agent kaniko', containers: [
                             name: ${jobName}
                             namespace: ${k8sNamespace}
                             labels:
-                                app.kubernetes.io/name: dhcpapp-validation
+                                app.kubernetes.io/name: dhcp-app-validation
                                 app.kubernetes.io/managed-by: jenkins
                                 jenkins/build-number: "${BUILD_NUMBER}"
                         spec:
@@ -160,7 +160,7 @@ podTemplate(inheritFrom: 'jenkins-agent kaniko', containers: [
             }
         }
 
-        stage('Building dhcp-app') {
+        stage('Building dhcpapp') {
             container('kaniko') {
                 helmCharts.kaniko("backend/Dockerfile", "backend", [
                     "registry:5000/dhcpapp:${currentBuild.number}",
@@ -169,7 +169,7 @@ podTemplate(inheritFrom: 'jenkins-agent kaniko', containers: [
             }
         }
 
-        stage('Building dhcp-app-frontend') {
+        stage('Building dhcpapp-ui') {
             writeFile file: 'frontend/git-rev', text: gitRev
 
             container('kaniko') {

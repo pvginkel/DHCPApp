@@ -1,0 +1,20 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v0.1.0
+_src_path: ../ModernAppTemplate
+author_email: pvginkel@gmail.com
+author_name: Pieter van Ginkel
+backend_image: dhcpapp
+backend_image_pin_key: dhcpapp
+backend_port: 3301
+deploy_repo: pvginkel/DnsmasqDeploy
+frontend_image: dhcpapp-ui
+frontend_image_pin_key: dhcpapp_ui
+frontend_port: 3300
+github_owner: pvginkel
+project_description: REST API and web UI for monitoring dnsmasq DHCP leases in a homelab
+project_name: dhcp-app
+repo_name: DHCPApp
+sse_gateway_port: 3302
+use_database: false
+use_s3: false
+use_sse: true

@@ -6,7 +6,7 @@
 # `ssegateway` package (a frontend devDependency, github:pvginkel/SSEGateway#stable)
 # — no sibling checkout needed.
 # scripts/dev.py runs honcho itself inside the modern-app tool container (the
-# dev container has neither poetry nor pnpm, and all three services need that
+# dev container has neither poetry nor pnpm, and every service needs that
 # container anyway), so these lines run there natively — no cexec.
 # honcho runs from the root project's poetry venv and children inherit
 # VIRTUAL_ENV, which makes the backend's `poetry run` reuse the root venv and
