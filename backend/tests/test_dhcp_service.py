@@ -202,6 +202,27 @@ class TestStaticLeaseParsing:
         assert service.get_all_leases() == []
         assert "dhcp-hosts" in caplog.text
 
+    def test_hostsfile_appearing_later_is_picked_up(self, tmp_path, mock_mac_vendor) -> None:
+        """The sidecar that renders the hostsfile may not have run yet.
+
+        A failed load must not leave the cache looking loaded, or the
+        reservations stay missing for the life of the process.
+        """
+        service = self.build_service(
+            tmp_path,
+            mock_mac_vendor,
+            "dhcp-leasefile=/dnsmasq.leases\ndhcp-hostsfile=/static.d/dhcp-hosts\n",
+            {},
+        )
+        assert service.get_all_leases() == []
+
+        hostsfile = tmp_path / "static.d" / "dhcp-hosts"
+        hostsfile.parent.mkdir(parents=True, exist_ok=True)
+        hostsfile.write_text(f"{self.RESERVATION}\n")
+
+        service.reload_lease_cache()
+        assert self.static_ips(service) == {"10.1.0.30"}
+
     def test_dhcp_host_directive(self, tmp_path, mock_mac_vendor) -> None:
         service = self.build_service(
             tmp_path,
@@ -220,8 +241,12 @@ class TestStaticLeaseParsing:
         )
         assert self.static_ips(service) == set()
 
-    def test_sample_tree_reservations_reach_the_leases(self, tmp_path, mock_mac_vendor) -> None:
-        """The shipped sample tree is in production's format, so it must classify."""
+    def test_sample_tree_reservations_reach_the_leases(self, mock_mac_vendor) -> None:
+        """The shipped sample tree is in production's format, so it must classify.
+
+        Two hostsfiles, as the deployed pod has: the static set rendered from
+        the operator's own list, and the dynamic set the management API owns.
+        """
         test_data_dir = Path(__file__).parent / "data"
         app_settings = AppSettings(
             dnsmasq_config_file_path="/data/dnsmasq.conf",
@@ -230,4 +255,4 @@ class TestStaticLeaseParsing:
             dev_fake_lease_changes=False,
         )
         service = DhcpService(app_settings, mock_mac_vendor)
-        assert self.static_ips(service) == {"10.1.0.30"}
+        assert self.static_ips(service) == {"10.1.0.30", "10.1.1.97"}

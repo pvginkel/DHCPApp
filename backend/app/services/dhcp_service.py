@@ -435,7 +435,10 @@ class DhcpService:
         """
         self.logger.info("Loading static leases from discovered config files")
 
-        self._static_leases_cache = {"mac_to_ip": {}, "ip_to_mac": {}}
+        # Built aside and published at the end: a half-read tree must not look
+        # like a loaded one, or the next read skips the reload and the
+        # reservations stay missing until the process restarts.
+        static_leases: dict[str, dict[str, str]] = {"mac_to_ip": {}, "ip_to_mac": {}}
         static_count = 0
 
         for config_file_path in self.config_files:
@@ -449,15 +452,18 @@ class DhcpService:
                     if "dhcp-host=" in line:
                         parsed_lease = self._parse_dhcp_host_line(line)
                         if parsed_lease:
-                            self._record_static_lease(*parsed_lease)
+                            self._record_static_lease(static_leases, *parsed_lease)
                             static_count += 1
 
         for hostsfile_path in self.hostsfile_paths:
-            static_count += self._load_hostsfile(hostsfile_path)
+            static_count += self._load_hostsfile(static_leases, hostsfile_path)
 
+        self._static_leases_cache = static_leases
         self.logger.info(f"Loaded {static_count} static lease configurations")
 
-    def _load_hostsfile(self, hostsfile_path: str) -> int:
+    def _load_hostsfile(
+        self, static_leases: dict[str, dict[str, str]], hostsfile_path: str
+    ) -> int:
         """Load the reservations in one dhcp-hostsfile and return how many there were.
 
         Each line is a dhcp-host entry without the directive name, as
@@ -477,16 +483,18 @@ class DhcpService:
 
                 parsed_lease = self._parse_dhcp_host_value(line.split("#", 1)[0].split()[0])
                 if parsed_lease:
-                    self._record_static_lease(*parsed_lease)
+                    self._record_static_lease(static_leases, *parsed_lease)
                     count += 1
 
         self.logger.info(f"Loaded {count} reservations from DHCP hosts file: {hostsfile_path}")
         return count
 
-    def _record_static_lease(self, mac_address: str, ip_address: str) -> None:
-        """Record a reservation in both directions of the static lease cache."""
-        self._static_leases_cache["mac_to_ip"][mac_address] = ip_address
-        self._static_leases_cache["ip_to_mac"][ip_address] = mac_address
+    def _record_static_lease(
+        self, static_leases: dict[str, dict[str, str]], mac_address: str, ip_address: str
+    ) -> None:
+        """Record a reservation in both directions of a static lease map."""
+        static_leases["mac_to_ip"][mac_address] = ip_address
+        static_leases["ip_to_mac"][ip_address] = mac_address
 
     def _parse_dhcp_host_line(self, line: str) -> tuple[str, str] | None:
         """Parse dhcp-host configuration line to extract MAC and IP address."""
