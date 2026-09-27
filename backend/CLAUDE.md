@@ -67,6 +67,9 @@ The application implements dnsmasq's configuration parsing rules:
 - Discovers config files via conf-dir directives
 - Applies dnsmasq filtering (excludes backup files, hidden files, etc.)
 - Parses dhcp-range and dhcp-host directives across all config files
+- Follows dhcp-hostsfile directives and reads those files as dhcp-host entries with the
+  directive name left off — the shape dnsmasq-config-generator writes, and what the deployed
+  pod is actually given
 - Cross-references lease data with static assignments
 
 ### File Structure

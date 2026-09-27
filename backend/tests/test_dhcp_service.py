@@ -1,5 +1,6 @@
 """Tests for DhcpService."""
 
+import logging
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -108,3 +109,125 @@ class TestDhcpPool:
         assert d["pool_name"] == "test"
         assert d["total_addresses"] == 11
         assert d["lease_duration"] == 86400
+
+
+class TestStaticLeaseParsing:
+    """Reservations, in both shapes dnsmasq accepts them.
+
+    `dhcp-host=` lines live in the config files themselves; a `dhcp-hostsfile=`
+    names a file whose lines are the same value with the directive left off.
+    dnsmasq-config-generator writes the latter, so it is what production has.
+    """
+
+    LEASES = (
+        "1755747132 20:43:a8:ee:1c:4b 10.1.0.30 coordinator *\n"
+        "1755770757 28:00:af:c8:47:2b 10.1.1.27 IDH10018 01:28:00:af:c8:47:2b\n"
+    )
+    RESERVATION = "set:intranet,id:*,20:43:a8:ee:1c:4b,10.1.0.30,coordinator.home"
+
+    @pytest.fixture
+    def mock_mac_vendor(self) -> MacVendorService:
+        mock = Mock(spec=MacVendorService)
+        mock.get_vendor.return_value = None
+        return mock
+
+    def build_service(
+        self, root: Path, mac_vendor: MacVendorService, main_config: str, files: dict[str, str]
+    ) -> DhcpService:
+        """Write a dnsmasq tree under root and point a service at it."""
+        (root / "dnsmasq.leases").write_text(self.LEASES)
+        (root / "dnsmasq.conf").write_text(main_config)
+        for relative_path, content in files.items():
+            path = root / relative_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content)
+
+        app_settings = AppSettings(
+            dnsmasq_config_file_path="/dnsmasq.conf",
+            root_path=str(root),
+            update_mac_vendor_database=False,
+            dev_fake_lease_changes=False,
+        )
+        return DhcpService(app_settings, mac_vendor)
+
+    def static_ips(self, service: DhcpService) -> set[str]:
+        return {lease.ip_address for lease in service.get_all_leases() if lease.is_static}
+
+    def test_hostsfile_from_main_config(self, tmp_path, mock_mac_vendor) -> None:
+        service = self.build_service(
+            tmp_path,
+            mock_mac_vendor,
+            "dhcp-leasefile=/dnsmasq.leases\ndhcp-hostsfile=/static.d/dhcp-hosts\n",
+            {"static.d/dhcp-hosts": f"{self.RESERVATION}\n"},
+        )
+        assert self.static_ips(service) == {"10.1.0.30"}
+
+    def test_hostsfile_from_included_config(self, tmp_path, mock_mac_vendor) -> None:
+        service = self.build_service(
+            tmp_path,
+            mock_mac_vendor,
+            "dhcp-leasefile=/dnsmasq.leases\nconf-dir=/dnsmasq.d/,*.conf\n",
+            {
+                "dnsmasq.d/10-dhcp.conf": "dhcp-hostsfile=/static.d/dhcp-hosts\n",
+                "static.d/dhcp-hosts": f"{self.RESERVATION}\n",
+            },
+        )
+        assert self.static_ips(service) == {"10.1.0.30"}
+
+    def test_hostsfile_comments_and_blank_lines(self, tmp_path, mock_mac_vendor) -> None:
+        service = self.build_service(
+            tmp_path,
+            mock_mac_vendor,
+            "dhcp-leasefile=/dnsmasq.leases\ndhcp-hostsfile=/static.d/dhcp-hosts\n",
+            {
+                "static.d/dhcp-hosts": (
+                    "# Automatically generated file.\n"
+                    "\n"
+                    f"{self.RESERVATION} # the Zigbee coordinator\n"
+                ),
+            },
+        )
+        assert self.static_ips(service) == {"10.1.0.30"}
+
+    def test_missing_hostsfile_is_not_silent(self, tmp_path, mock_mac_vendor, caplog) -> None:
+        """A named but absent hostsfile errors; it does not read as zero reservations."""
+        with caplog.at_level(logging.ERROR):
+            service = self.build_service(
+                tmp_path,
+                mock_mac_vendor,
+                "dhcp-leasefile=/dnsmasq.leases\ndhcp-hostsfile=/static.d/dhcp-hosts\n",
+                {},
+            )
+
+        assert service.get_all_leases() == []
+        assert "dhcp-hosts" in caplog.text
+
+    def test_dhcp_host_directive(self, tmp_path, mock_mac_vendor) -> None:
+        service = self.build_service(
+            tmp_path,
+            mock_mac_vendor,
+            "dhcp-leasefile=/dnsmasq.leases\nconf-dir=/dnsmasq.d/,*.conf\n",
+            {"dnsmasq.d/20-hosts.conf": f"dhcp-host={self.RESERVATION}\n"},
+        )
+        assert self.static_ips(service) == {"10.1.0.30"}
+
+    def test_entry_without_address_is_no_reservation(self, tmp_path, mock_mac_vendor) -> None:
+        service = self.build_service(
+            tmp_path,
+            mock_mac_vendor,
+            "dhcp-leasefile=/dnsmasq.leases\ndhcp-hostsfile=/static.d/dhcp-hosts\n",
+            {"static.d/dhcp-hosts": "set:intranet,20:43:a8:ee:1c:4b\n"},
+        )
+        assert self.static_ips(service) == set()
+
+    def test_sample_tree_reservations_reach_the_leases(self, tmp_path, mock_mac_vendor) -> None:
+        """The shipped sample tree is in production's format, so it must classify."""
+        test_data_dir = Path(__file__).parent / "data"
+        app_settings = AppSettings(
+            dnsmasq_config_file_path="/data/dnsmasq.conf",
+            root_path=str(test_data_dir.parent),
+            update_mac_vendor_database=False,
+            dev_fake_lease_changes=False,
+        )
+        service = DhcpService(app_settings, mock_mac_vendor)
+        assert self.static_ips(service) == {"10.1.0.30"}

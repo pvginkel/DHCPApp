@@ -26,6 +26,7 @@ class DhcpService:
         self.lease_file_path: str | None = None
         self.config_directories: list[tuple[str, str]] = []
         self.config_files: list[str] = []
+        self.hostsfile_paths: list[str] = []
         self.dhcp_pools: list[DhcpPool] = []
 
         # Cache for static leases
@@ -37,6 +38,7 @@ class DhcpService:
         # Parse main configuration on initialization
         self._parse_main_config()
         self._discover_config_files()
+        self._discover_hostsfiles()
         self._parse_dhcp_ranges()
 
         # Load initial lease cache
@@ -67,6 +69,11 @@ class DhcpService:
                     if line.startswith("dhcp-leasefile="):
                         self.lease_file_path = line.split("=", 1)[1].strip()
                         self.logger.info(f"Found lease file path: {self.lease_file_path}")
+
+                    elif line.startswith("dhcp-hostsfile="):
+                        hostsfile_path = line.split("=", 1)[1].strip()
+                        self.hostsfile_paths.append(hostsfile_path)
+                        self.logger.info(f"Found DHCP hosts file: {hostsfile_path}")
 
                     elif line.startswith("conf-dir="):
                         conf_dir_content = line.split("=", 1)[1].strip()
@@ -139,6 +146,25 @@ class DhcpService:
                 continue
 
         self.logger.info(f"Discovered {len(self.config_files)} configuration files")
+
+    def _discover_hostsfiles(self) -> None:
+        """Collect dhcp-hostsfile directives from the discovered config files.
+
+        The main config's own directives are already collected while parsing it;
+        dnsmasq honours the option in an included file just as well, so the
+        conf-dir tree is searched too.
+        """
+        for config_file_path in self.config_files:
+            with open(config_file_path, encoding="utf-8") as file:
+                for line in file:
+                    line = line.strip()
+
+                    if line.startswith("dhcp-hostsfile="):
+                        hostsfile_path = line.split("=", 1)[1].strip()
+                        self.hostsfile_paths.append(hostsfile_path)
+                        self.logger.info(f"Found DHCP hosts file: {hostsfile_path}")
+
+        self.logger.info(f"Discovered {len(self.hostsfile_paths)} DHCP hosts file(s)")
 
     def _parse_dhcp_ranges(self) -> None:
         """Parse all configuration files to extract DHCP pool information."""
@@ -400,64 +426,100 @@ class DhcpService:
         return ":".join(mac_clean[i : i + 2] for i in range(0, 12, 2))
 
     def _load_static_leases(self) -> None:
-        """Load static lease configurations from discovered dnsmasq config files."""
+        """Load static lease configurations from the discovered dnsmasq config tree.
+
+        Reservations reach dnsmasq two ways, and both are read here: dhcp-host
+        directives in the config files themselves, and the files named by
+        dhcp-hostsfile, whose lines carry the same comma-separated value with the
+        directive name left off.
+        """
         self.logger.info("Loading static leases from discovered config files")
 
         self._static_leases_cache = {"mac_to_ip": {}, "ip_to_mac": {}}
         static_count = 0
 
         for config_file_path in self.config_files:
-            try:
-                with open(config_file_path, encoding="utf-8") as file:
-                    for line in file:
-                        line = line.strip()
+            with open(config_file_path, encoding="utf-8") as file:
+                for line in file:
+                    line = line.strip()
 
-                        if not line or line.startswith("#"):
-                            continue
+                    if not line or line.startswith("#"):
+                        continue
 
-                        if "dhcp-host=" in line:
-                            parsed_lease = self._parse_dhcp_host_line(line)
-                            if parsed_lease:
-                                mac_address, ip_address = parsed_lease
-                                self._static_leases_cache["mac_to_ip"][mac_address] = ip_address
-                                self._static_leases_cache["ip_to_mac"][ip_address] = mac_address
-                                static_count += 1
+                    if "dhcp-host=" in line:
+                        parsed_lease = self._parse_dhcp_host_line(line)
+                        if parsed_lease:
+                            self._record_static_lease(*parsed_lease)
+                            static_count += 1
 
-            except Exception as e:
-                self.logger.warning(f"Error reading config file {config_file_path}: {e}")
-                continue
+        for hostsfile_path in self.hostsfile_paths:
+            static_count += self._load_hostsfile(hostsfile_path)
 
         self.logger.info(f"Loaded {static_count} static lease configurations")
 
+    def _load_hostsfile(self, hostsfile_path: str) -> int:
+        """Load the reservations in one dhcp-hostsfile and return how many there were.
+
+        Each line is a dhcp-host entry without the directive name, as
+        dnsmasq-config-generator writes it:
+
+            set:intranet,id:*,20:43:a8:ee:1c:4b,10.1.0.30,coordinator.home
+        """
+        resolved_path = self._resolve_path(hostsfile_path)
+        count = 0
+
+        with open(resolved_path, encoding="utf-8") as file:
+            for line in file:
+                line = line.strip()
+
+                if not line or line.startswith("#"):
+                    continue
+
+                parsed_lease = self._parse_dhcp_host_value(line.split("#", 1)[0].split()[0])
+                if parsed_lease:
+                    self._record_static_lease(*parsed_lease)
+                    count += 1
+
+        self.logger.info(f"Loaded {count} reservations from DHCP hosts file: {hostsfile_path}")
+        return count
+
+    def _record_static_lease(self, mac_address: str, ip_address: str) -> None:
+        """Record a reservation in both directions of the static lease cache."""
+        self._static_leases_cache["mac_to_ip"][mac_address] = ip_address
+        self._static_leases_cache["ip_to_mac"][ip_address] = mac_address
+
     def _parse_dhcp_host_line(self, line: str) -> tuple[str, str] | None:
         """Parse dhcp-host configuration line to extract MAC and IP address."""
-        try:
-            dhcp_host_match = re.search(r"dhcp-host=([^#\s]+)", line)
-            if not dhcp_host_match:
-                return None
-
-            dhcp_host_content = dhcp_host_match.group(1)
-            components = [comp.strip() for comp in dhcp_host_content.split(",")]
-
-            mac_address = None
-            ip_address = None
-
-            for component in components:
-                if re.match(r"^([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}$", component):
-                    mac_address = self._normalize_mac_address(component)
-                elif re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", component):
-                    parts = component.split(".")
-                    if all(0 <= int(part) <= 255 for part in parts):
-                        ip_address = component
-
-            if mac_address and ip_address:
-                return (mac_address, ip_address)
-
+        dhcp_host_match = re.search(r"dhcp-host=([^#\s]+)", line)
+        if not dhcp_host_match:
             return None
 
-        except Exception as e:
-            self.logger.warning(f"Error parsing dhcp-host line: {line}. Error: {e}")
-            return None
+        return self._parse_dhcp_host_value(dhcp_host_match.group(1))
+
+    def _parse_dhcp_host_value(self, dhcp_host_content: str) -> tuple[str, str] | None:
+        """Extract MAC and IP address from a dhcp-host value.
+
+        Returns None for an entry that reserves no address — a MAC that only
+        carries a tag, for instance — which is a valid dhcp-host but not a
+        reservation this app has anything to show.
+        """
+        components = [comp.strip() for comp in dhcp_host_content.split(",")]
+
+        mac_address = None
+        ip_address = None
+
+        for component in components:
+            if re.match(r"^([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}$", component):
+                mac_address = self._normalize_mac_address(component)
+            elif re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", component):
+                parts = component.split(".")
+                if all(0 <= int(part) <= 255 for part in parts):
+                    ip_address = component
+
+        if mac_address and ip_address:
+            return (mac_address, ip_address)
+
+        return None
 
     def _is_static_lease(self, mac_address: str, ip_address: str) -> bool:
         """Check if a lease matches static configuration."""
