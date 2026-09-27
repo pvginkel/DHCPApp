@@ -28,6 +28,17 @@ repos:
   # separately.
   - url: https://github.com/pvginkel/DnsmasqDeploy
 
+  # The homelab's image repository. `dnsmasq/` is the image this app sits behind:
+  # its `files/dhcp-script.sh` is what POSTs lease changes to the app's
+  # /internal/notify-lease-change, so that contract's two ends are changed
+  # together (ANS-131). `dnsmasq/` is a Dockerfile-only directory and declares no
+  # gate; the two gates its project.yaml does declare (backup-server's Go suite,
+  # the architecture artifacts) are nothing to do with this app, so no `go`
+  # toolchain is added for them — `iac`, which the architecture one needs, is
+  # already here for the deploy repo. An ordinary (unshared) entry, cloned to
+  # /work/DockerImages and committed separately.
+  - url: https://github.com/pvginkel/DockerImages
+
 capabilities:
   github: rw
 

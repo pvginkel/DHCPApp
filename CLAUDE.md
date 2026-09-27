@@ -30,6 +30,12 @@ commands need `cexec modern-app`. `scripts/dev.py` starts all three services tog
 The spec repo is `../DHCPAppSpecs` (private): slices, plans and each run's state. It is a **separate
 git repo** — commit there separately.
 
+The image repo is `../DockerImages`: the homelab's Dockerfiles, including `dnsmasq` — whose
+`files/dhcp-script.sh` POSTs every lease change to this app's `/internal/notify-lease-change`, so
+that contract's two ends change together. `dnsmasq/` is Dockerfile-only and declares no gate, so
+there is nothing to run for a change there; its per-image Jenkins jobs write their tags into the
+deploy repos themselves. A **separate git repo** — commit there separately.
+
 The deploy repo is `../DnsmasqDeploy`: the Helm chart carrying this app's manifests alongside
 dnsmasq's own, and the `config/prd/values.yaml` the build pins both image tags into for Argo CD to
 sync. Also a **separate git repo** — commit there separately. Its verbs run through the `iac` and

@@ -1,6 +1,7 @@
 {
-  // The repository root, the shared spec repository the AI workflow uses, and the
-  // deploy repository this app's manifests and image pins live in.
+  // The repository root, the shared spec repository the AI workflow uses, the
+  // deploy repository this app's manifests and image pins live in, and the image
+  // repository that carries dnsmasq's lease-change script.
   // backend/ and frontend/ are not listed separately: the root folder already
   // covers them, and adding them would show every file twice in the explorer.
   "folders": [
@@ -12,6 +13,9 @@
     },
     {
       "path": "../DnsmasqDeploy"
+    },
+    {
+      "path": "../DockerImages"
     }
   ],
   // Only the repo's own dev runner needs a task. Starting a Claude session and
