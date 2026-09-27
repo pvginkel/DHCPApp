@@ -13,6 +13,9 @@ applicationComponents:
     lifecycle: active
     stereotype: SoftwareProduct
     sourceRepository: git:pvginkel/DHCPApp
+    # Registered in the architecture app's logo set; the app switcher resolves a
+    # tile's icon through it (homeapps reads the model, not each app's assets).
+    logo: dhcp-app
     stats:
       image: registry:5000/dhcpapp-ui
 
