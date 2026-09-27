@@ -30,6 +30,11 @@ commands need `cexec modern-app`. `scripts/dev.py` starts all three services tog
 The spec repo is `../DHCPAppSpecs` (private): slices, plans and each run's state. It is a **separate
 git repo** — commit there separately.
 
+The deploy repo is `../DnsmasqDeploy`: the Helm chart carrying this app's manifests alongside
+dnsmasq's own, and the `config/prd/values.yaml` the build pins both image tags into for Argo CD to
+sync. Also a **separate git repo** — commit there separately. Its verbs run through the `iac` and
+`aac-tools` sidecars.
+
 ## Working rules
 
 **Commit early and often, each meaningful unit, without being asked** — in this repo and the specs

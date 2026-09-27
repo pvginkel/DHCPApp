@@ -1,5 +1,6 @@
 {
-  // The repository root, plus the shared spec repository the AI workflow uses.
+  // The repository root, the shared spec repository the AI workflow uses, and the
+  // deploy repository this app's manifests and image pins live in.
   // backend/ and frontend/ are not listed separately: the root folder already
   // covers them, and adding them would show every file twice in the explorer.
   "folders": [
@@ -8,6 +9,9 @@
     },
     {
       "path": "../DHCPAppSpecs"
+    },
+    {
+      "path": "../DnsmasqDeploy"
     }
   ],
   // Only the repo's own dev runner needs a task. Starting a Claude session and

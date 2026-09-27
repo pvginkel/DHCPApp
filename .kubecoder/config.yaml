@@ -1,8 +1,9 @@
 # KubeCoder environment manifest for the DHCPApp monorepo.
 #
-# One sidecar rather than `python` + `frontend`: the Playwright harness boots the
+# `modern-app` rather than `python` + `frontend`: the Playwright harness boots the
 # Flask backend and the SSE gateway per worker (frontend/tests/support/process/servers.ts),
-# so a single command needs both toolsets in the same container.
+# so a single command needs both toolsets in the same container. `iac` and
+# `aac-tools` are the deploy repo's, not this repo's — see the `repos:` entry below.
 #
 # No data-store sidecars: the backend reads dnsmasq lease and config files off
 # disk, and the app has no database and no object store. Development and testing
@@ -18,11 +19,24 @@ repos:
   - url: https://github.com/pvginkel/DHCPAppSpecs
     shared: true
 
+  # The deploy repository. Its chart carries this app's manifests alongside
+  # dnsmasq's own, and the DHCP/DHCPApp build pins the two image tags into
+  # config/prd/values.yaml for Argo CD to sync, so a change here and the change
+  # that deploys it are read and made together. Its own .kubecoder/project.yaml
+  # runs every verb through the `iac` and `aac-tools` sidecars declared below;
+  # an ordinary (unshared) entry, cloned to /work/DnsmasqDeploy and committed
+  # separately.
+  - url: https://github.com/pvginkel/DnsmasqDeploy
+
 capabilities:
   github: rw
 
 tools:
   - use: modern-app
+  # Both are DnsmasqDeploy's: `iac` for its Helm chart and Terraform, `aac-tools`
+  # for its architecture producer. Nothing in this repo uses either.
+  - use: iac
+  - use: aac-tools
 
 ports:
   - name: frontend
