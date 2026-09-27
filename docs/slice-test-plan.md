@@ -13,10 +13,12 @@ working tree.
 
 **The push in step 4 deploys to production.** `Jenkinsfile` has no DTAP and no branch gating: the
 `DHCP/DHCPApp` job validates, builds both images with `helmCharts.kaniko(...)` — `dhcpapp` and
-`dhcpapp-ui` — and ends in `cicd.helmDeploy()`. Every push to `main` has always done that; it is the
-repo's standing behaviour, not something this phase chooses. The consequence for ordering is the
-whole point of this doc: **everything is verified before the push, because after the push it is
-live.**
+`dhcpapp-ui` — and ends in `cicd.writeVersionPins(...)`, which commits the two tags into the deploy
+repo's `config/prd/values.yaml`; Argo CD syncs that commit. Every push to `main` reaches production
+that way; it is the repo's standing behaviour, not something this phase chooses. The one wrinkle is
+that the last hop is Argo's, so production goes live a short while after the job is green rather
+than within it — a push is no less final for that. The consequence for ordering is the whole point
+of this doc: **everything is verified before the push, because after the push it is live.**
 
 There is no `devlock`: with no dev instance, nothing contends.
 
