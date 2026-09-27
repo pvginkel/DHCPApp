@@ -49,11 +49,12 @@ without operator input; open questions listed at the end.
 
 - Operational surfaces **OUT** (belong to the helm-charts/deployment lens, not
   the app): `/metrics` (Prometheus), `/health/{healthz,readyz,drain}`.
-- `/internal/notify-lease-change` (POST from the in-pod dnsmasq companion
-  container) — **OUT** as deployment-internal plumbing. It is arguably a second
-  consumer class (the lease-watcher sidecar), but it is same-pod operational
-  glue rather than a published API contract; defaulted out per the inclusion
-  rule. See open questions.
+- `/internal/notify-lease-change` (POST from dnsmasq's `dhcp-script`) — **OUT**
+  as deployment-internal plumbing. It is arguably a second consumer class, and
+  since ANS-131 the call crosses pods — dnsmasq reaches it over this app's
+  Service — so the "same-pod glue" that first justified excluding it no longer
+  holds. Still defaulted out per the inclusion rule: it is operational plumbing,
+  not a published API contract. See open questions.
 - `/api/testing/*` endpoints — **OUT**; only mounted under `FLASK_ENV=testing`,
   not a production surface.
 - Capabilities **realized**: none. This app *monitors* DHCP (reads dnsmasq lease
@@ -76,9 +77,10 @@ publishes.
 - **IEEE OUI registry (`svc:ieee-oui`):** keep it as a modeled external service,
   or treat the OUI download as a library/data-fetch detail and drop it? Modeled
   IN as the best-effort call; low confidence.
-- **`/internal/notify-lease-change`:** should the dnsmasq lease-watcher companion
-  be modeled as a distinct consumer (a second `ApplicationInterface` on
-  `svc:dhcpapp-api`), or does it stay deployment-internal plumbing (current
+- **`/internal/notify-lease-change`:** now a cross-pod call from dnsmasq (ANS-131)
+  rather than same-pod glue. Should dnsmasq be modeled as a distinct consumer
+  (a second `ApplicationInterface` on `svc:dhcpapp-api`, with `ss:dnsmasq`
+  associated to it), or does it stay deployment-internal plumbing (current
   choice)?
 - **OIDC edge:** OIDC is optional (`OIDC_ENABLED`, off by default for the
   single-user homelab profile). Kept the `cap:iam` edge as the dependency is

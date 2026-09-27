@@ -1,4 +1,7 @@
-"""Internal endpoints for companion container notifications."""
+"""Internal endpoints for the dnsmasq lease-change push.
+
+Cluster-only: reached over the Service, never through the UI's NGINX.
+"""
 
 import logging
 from datetime import UTC, datetime
@@ -29,10 +32,10 @@ def notify_lease_change(
 ) -> tuple[Response, int]:
     """Internal notification endpoint for lease file changes.
 
-    Called by companion containers when dnsmasq lease file changes.
-    Reloads lease cache and broadcasts data_changed to all SSE clients.
+    Called by dnsmasq's dhcp-script when the lease file changes. Reloads the
+    lease cache and broadcasts data_changed to all SSE clients.
     """
-    logger.info("Received lease change notification from companion container")
+    logger.info("Received lease change notification from dnsmasq")
 
     if app_settings.dev_fake_lease_changes:
         _apply_fake_changes(dhcp_service)
