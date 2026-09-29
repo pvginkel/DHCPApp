@@ -117,6 +117,10 @@ class ServiceContainer(containers.DeclarativeContainer):
         app_settings=app_config,
         mac_vendor_service=mac_vendor_service,
     )
+    # Built before the server binds, so the first request -- often dnsmasq's
+    # lease-change notification, which gives up after 5s -- never pays for the
+    # config parse, the lease load and the MAC vendor download.
+    register_for_background_startup(lambda c: c.dhcp_service())
 
 
 def start_background_services(container: Any) -> None:
