@@ -8,7 +8,7 @@ This is a DHCP monitoring application backend designed for homelab environments.
 ## Development Commands
 
 ### Running commands in this environment
-This repo runs inside a KubeCoder pod, where Poetry lives in the `modern-app` tool container rather than the main dev container. The curated verbs are `kc project setup|build|test|lint` (optionally with `--project BACKEND`), run from the repo root `/work/DHCPApp`. The `poetry ...` commands shown below are the underlying commands these wrap; when running them by hand, prefix them with `cexec modern-app` (e.g. `cexec modern-app poetry run pytest`).
+This repo runs inside a KubeCoder pod, where Poetry lives in the `modern-app` tool container rather than the main dev container. The curated verbs are `kc project setup|build|test|lint` (optionally with `--project backend`), run from the repo root `/work/DHCPApp`. The `poetry ...` commands shown below are the underlying commands these wrap; when running them by hand, prefix them with `cexec modern-app` (e.g. `cexec modern-app poetry run pytest`).
 
 ### Python Environment Setup
 This project uses Poetry for dependency management:
@@ -37,7 +37,7 @@ poetry run vulture app/ vulture_whitelist.py --min-confidence 80  # Dead code de
 poetry run pytest                                                 # Full test suite
 ```
 
-`kc project lint --project BACKEND` runs the same ruff/mypy/vulture trio without pytest.
+`kc project lint --project backend` runs the same ruff/mypy/vulture trio without pytest.
 
 ### Testing
 - **Run all tests**: `poetry run pytest`
