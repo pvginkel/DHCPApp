@@ -1,6 +1,7 @@
 # kaniko reads .dockerignore from the build context root, and the frontend is
-# its own context (Jenkinsfile: helmCharts.kaniko("frontend/Dockerfile",
-# "frontend", ...)). The repo-root .dockerignore does not apply here.
+# its own context (Jenkinsfile: helmCharts.kaniko2(dockerfile:
+# 'frontend/Dockerfile', context: 'frontend', ...)). The repo-root .dockerignore
+# does not apply here.
 #
 # node_modules matters for correctness, not just speed: the Dockerfile runs
 # pnpm install and then COPY . ., so an uploaded host node_modules would

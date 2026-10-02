@@ -1,6 +1,7 @@
 # kaniko reads .dockerignore from the build context root, and the backend is its
-# own context (Jenkinsfile: helmCharts.kaniko("backend/Dockerfile", "backend",
-# ...)). A .dockerignore at the repository root is never read for this build.
+# own context (Jenkinsfile: helmCharts.kaniko2(dockerfile: 'backend/Dockerfile',
+# context: 'backend', ...)). A .dockerignore at the repository root is never read
+# for this build.
 #
 # Everything listed here is a path the Dockerfile does not COPY — it takes only
 # pyproject.toml, poetry.lock, the root-level *.py and app/ — so this file

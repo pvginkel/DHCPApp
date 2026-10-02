@@ -10,7 +10,7 @@
 # both default DNSMASQ_CONFIG_FILE_PATH to the sample tree the repo ships, so no
 # .env and no `env:` block is needed here.
 #
-# No imageBuilder: both Dockerfiles are built by Jenkins with helmCharts.kaniko(...),
+# No imageBuilder: both Dockerfiles are built by Jenkins with helmCharts.kaniko2(...),
 # and nothing builds an image from inside this environment.
 
 repos:
