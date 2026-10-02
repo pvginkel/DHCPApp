@@ -48,7 +48,7 @@ repo alike; never batch unrelated changes.
 
 **Work directly on `main`; no topic branches, and push as you go.** Single-person homelab, no other
 committers to coordinate with. Don't make "ahead of origin" remarks — just push. Note that **a push
-to `main` deploys to production**, with no DTAP and no branch gating: the `DHCP/DHCPApp` job runs
+to `main` deploys to production**, with no DTAP and no branch gating: the `DHCPApp` job runs
 `run-suite` in a validation Job, builds both images with kaniko, then pins the two tags into the
 deploy repo's `config/prd/values.yaml` (`cicd.writeVersionPins`) for Argo CD to sync. Git is the
 deployed state, so a rollback is a revert in `../DnsmasqDeploy`.

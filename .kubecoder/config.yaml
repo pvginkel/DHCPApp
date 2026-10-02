@@ -20,7 +20,7 @@ repos:
     shared: true
 
   # The deploy repository. Its chart carries this app's manifests alongside
-  # dnsmasq's own, and the DHCP/DHCPApp build pins the two image tags into
+  # dnsmasq's own, and the DHCPApp build pins the two image tags into
   # config/prd/values.yaml for Argo CD to sync, so a change here and the change
   # that deploys it are read and made together. Its own .kubecoder/project.yaml
   # runs every verb through the `iac` and `aac-tools` sidecars declared below;
