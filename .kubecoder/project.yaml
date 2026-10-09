@@ -6,7 +6,7 @@ projects:
     # The build/deploy pipeline (Jenkinsfile). The repo has a second job,
     # AaC/DHCPApp, driven by Jenkinsfile.architecture — it validates the two
     # docs/architecture/*.yaml artifacts and publishes one `dhcpapp` producer.
-    jenkins: DHCPApp
+    jenkins: Dnsmasq/DHCPApp
     setup: cexec modern-app poetry install --no-interaction
     # The root's own Python only; backend/ and frontend/ lint themselves. The
     # rule set and the Ruff version are pinned in the root pyproject.toml.

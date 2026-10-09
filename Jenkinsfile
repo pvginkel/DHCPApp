@@ -5,7 +5,7 @@
 // there is no promote stage.
 //
 // Controller config:
-//   - Job: DHCPApp
+//   - Job: Dnsmasq/DHCPApp
 //   - SCM: pvginkel/DHCPApp, branch main
 //   - Script Path: Jenkinsfile
 

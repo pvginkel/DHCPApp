@@ -12,7 +12,7 @@ deployed. It runs the suites tree-wide and boots the dev stack in this environme
 working tree.
 
 **The push in step 4 deploys to production.** `Jenkinsfile` has no DTAP and no branch gating: the
-`DHCPApp` job validates, builds both images with `helmCharts.kaniko2(...)` — `dhcpapp` and
+`Dnsmasq/DHCPApp` job validates, builds both images with `helmCharts.kaniko2(...)` — `dhcpapp` and
 `dhcpapp-ui` — and ends in `cicd.writeVersionPins(...)`, which commits the two tags into the deploy
 repo's `config/prd/values.yaml`; Argo CD syncs that commit. Every push to `main` reaches production
 that way; it is the repo's standing behaviour, not something this phase chooses. The one wrinkle is
@@ -116,14 +116,14 @@ Record the current build number **before** pushing, so you can tell your build f
 there:
 
 ```
-mcp__jenkins__getJob  jobFullName='DHCPApp'  tree='lastBuild[number,result]'
+mcp__jenkins__getJob  jobFullName='Dnsmasq/DHCPApp'  tree='lastBuild[number,result]'
 ```
 
 Push, then poll the same call until `lastBuild.number` is higher and its `result` is no longer
 `null`, and read the outcome:
 
 ```
-mcp__jenkins__getBuild  jobFullName='DHCPApp'  buildNumber=<n>  tree='number,result,description'
+mcp__jenkins__getBuild  jobFullName='Dnsmasq/DHCPApp'  buildNumber=<n>  tree='number,result,description'
 ```
 
 The description carries the suite summary CI builds from `run-suite`'s
