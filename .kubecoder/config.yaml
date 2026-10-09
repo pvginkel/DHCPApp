@@ -45,8 +45,8 @@ capabilities:
 tools:
   - use: modern-app
   # `iac` is DnsmasqDeploy's, for its Helm chart and Terraform; `aac-tools` is
-  # for DnsmasqDeploy's and Dnsmasq's architecture producers. Nothing in this
-  # repo uses either.
+  # for DnsmasqDeploy's chart dependencies and for DnsmasqDeploy's and Dnsmasq's
+  # architecture producers. Nothing in this repo uses either.
   - use: iac
   - use: aac-tools
 
