@@ -30,8 +30,8 @@ repos:
   # POSTs lease changes to this app's /internal/notify-lease-change, so that
   # contract's two ends are changed together. Its images are pinned into the
   # same deploy repo as this app's, and its gate runs through `modern-app`,
-  # `aac-tools` and the image builder below. An ordinary (unshared) entry, cloned
-  # to /work/Dnsmasq and committed separately.
+  # `iac`, `aac-tools` and the image builder below. An ordinary (unshared)
+  # entry, cloned to /work/Dnsmasq and committed separately.
   - url: https://github.com/pvginkel/Dnsmasq
 
 # For the Dnsmasq repo's integration tests: they run its images as Jobs in the
@@ -44,8 +44,9 @@ capabilities:
 
 tools:
   - use: modern-app
-  # `iac` is DnsmasqDeploy's, for its Helm chart and Terraform; `aac-tools` is
-  # for DnsmasqDeploy's chart dependencies and for DnsmasqDeploy's and Dnsmasq's
+  # `iac` is for DnsmasqDeploy's Helm chart and Terraform, and for the kubectl
+  # Dnsmasq's validation runner drives its Job with; `aac-tools` is for
+  # DnsmasqDeploy's chart dependencies and for DnsmasqDeploy's and Dnsmasq's
   # architecture producers. Nothing in this repo uses either.
   - use: iac
   - use: aac-tools
