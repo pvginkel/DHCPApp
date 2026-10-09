@@ -37,9 +37,9 @@ repos:
   - url: https://github.com/pvginkel/DockerImages
 
   # dnsmasq's own repo: the dnsmasq image, its config generator and management
-  # API, and their tests, moving out of DockerImages (DA-3). Its images are pinned
-  # into the same deploy repo as this app's. An ordinary (unshared) entry, cloned
-  # to /work/Dnsmasq and committed separately.
+  # API, and their tests. Its images are pinned into the same deploy repo as this
+  # app's. An ordinary (unshared) entry, cloned to /work/Dnsmasq and committed
+  # separately.
   - url: https://github.com/pvginkel/Dnsmasq
 
 # For the Dnsmasq repo's integration tests: they run its images as Jobs in the
