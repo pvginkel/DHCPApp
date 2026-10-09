@@ -3,7 +3,7 @@
 # `modern-app` rather than `python` + `frontend`: the Playwright harness boots the
 # Flask backend and the SSE gateway per worker (frontend/tests/support/process/servers.ts),
 # so a single command needs both toolsets in the same container. `iac` and
-# `aac-tools` are the deploy repo's, not this repo's — see the `repos:` entry below.
+# `aac-tools` are the sibling repos', not this repo's — see the `repos:` entries below.
 #
 # No data-store sidecars: the backend reads dnsmasq lease and config files off
 # disk, and the app has no database and no object store. Development and testing
@@ -25,21 +25,13 @@ repos:
   # separately.
   - url: https://github.com/pvginkel/DnsmasqDeploy
 
-  # The homelab's image repository. `dnsmasq/` is the image this app sits behind:
-  # its `files/dhcp-script.sh` is what POSTs lease changes to the app's
-  # /internal/notify-lease-change, so that contract's two ends are changed
-  # together (ANS-131). `dnsmasq/` is a Dockerfile-only directory and declares no
-  # gate; the two gates its project.yaml does declare (backup-server's Go suite,
-  # the architecture artifacts) are nothing to do with this app, so no `go`
-  # toolchain is added for them — `iac`, which the architecture one needs, is
-  # already here for the deploy repo. An ordinary (unshared) entry, cloned to
-  # /work/DockerImages and committed separately.
-  - url: https://github.com/pvginkel/DockerImages
-
   # dnsmasq's own repo: the dnsmasq image, its config generator and management
-  # API, and their tests. Its images are pinned into the same deploy repo as this
-  # app's. An ordinary (unshared) entry, cloned to /work/Dnsmasq and committed
-  # separately.
+  # API, and their tests. The image's `dnsmasq/files/dhcp-script.sh` is what
+  # POSTs lease changes to this app's /internal/notify-lease-change, so that
+  # contract's two ends are changed together. Its images are pinned into the
+  # same deploy repo as this app's, and its gate runs through `modern-app`,
+  # `aac-tools` and the image builder below. An ordinary (unshared) entry, cloned
+  # to /work/Dnsmasq and committed separately.
   - url: https://github.com/pvginkel/Dnsmasq
 
 # For the Dnsmasq repo's integration tests: they run its images as Jobs in the
@@ -52,8 +44,9 @@ capabilities:
 
 tools:
   - use: modern-app
-  # Both are DnsmasqDeploy's: `iac` for its Helm chart and Terraform, `aac-tools`
-  # for its architecture producer. Nothing in this repo uses either.
+  # `iac` is DnsmasqDeploy's, for its Helm chart and Terraform; `aac-tools` is
+  # for DnsmasqDeploy's and Dnsmasq's architecture producers. Nothing in this
+  # repo uses either.
   - use: iac
   - use: aac-tools
 

@@ -1,8 +1,7 @@
 {
   // The repository root, the shared spec repository the AI workflow uses, the
-  // deploy repository this app's manifests and image pins live in, the image
-  // repository that carries dnsmasq's lease-change script, and dnsmasq's own repo,
-  // which that image is moving to.
+  // deploy repository this app's manifests and image pins live in, and dnsmasq's
+  // own repo, which carries dnsmasq's lease-change script.
   // backend/ and frontend/ are not listed separately: the root folder already
   // covers them, and adding them would show every file twice in the explorer.
   "folders": [
@@ -14,9 +13,6 @@
     },
     {
       "path": "../DnsmasqDeploy"
-    },
-    {
-      "path": "../DockerImages"
     },
     {
       "path": "../Dnsmasq"
