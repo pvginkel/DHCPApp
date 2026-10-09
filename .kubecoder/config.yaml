@@ -9,9 +9,6 @@
 # disk, and the app has no database and no object store. Development and testing
 # both default DNSMASQ_CONFIG_FILE_PATH to the sample tree the repo ships, so no
 # .env and no `env:` block is needed here.
-#
-# No imageBuilder: both Dockerfiles are built by Jenkins with helmCharts.kaniko2(...),
-# and nothing builds an image from inside this environment.
 
 repos:
   # The AI workflow's spec repository, shared across every environment that
@@ -38,6 +35,17 @@ repos:
   # already here for the deploy repo. An ordinary (unshared) entry, cloned to
   # /work/DockerImages and committed separately.
   - url: https://github.com/pvginkel/DockerImages
+
+  # dnsmasq's own repo: the dnsmasq image, its config generator and management
+  # API, and their tests, moving out of DockerImages (DA-3). Its images are pinned
+  # into the same deploy repo as this app's. An ordinary (unshared) entry, cloned
+  # to /work/Dnsmasq and committed separately.
+  - url: https://github.com/pvginkel/Dnsmasq
+
+# For the Dnsmasq repo's integration tests: they run its images as Jobs in the
+# cluster, so testing a change before it is pushed needs images built here.
+# DHCPApp's own Dockerfiles are built by Jenkins only.
+imageBuilder: true
 
 capabilities:
   github: rw
