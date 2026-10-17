@@ -47,7 +47,6 @@ export function LeaseTable({ leases: rawLeases, isLoading, error }: LeaseTablePr
 
     if (!rawDataRef.current) {
       rawDataRef.current = [...rawLeases]
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: syncing external query data to display state on initial load
       setDisplayState({ leases: rawLeases, changes: {} })
       return
     }
@@ -104,6 +103,7 @@ export function LeaseTable({ leases: rawLeases, isLoading, error }: LeaseTablePr
         }
       }
 
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: diffs each new query snapshot against the last one (held in a ref) to animate added, updated and removed rows for a second
       setDisplayState({
         leases: frozenDisplayLeases,
         changes: newChanges,
