@@ -55,7 +55,7 @@ sidecar — and exercise the ports `.kubecoder/config.yaml` publishes: frontend 
 SSE gateway 3302.
 
 ```bash
-cexec modern-app sh -c "poetry run honcho -f Procfile.dev start & echo \$! > /tmp/dhcpapp-dev.pid; wait" \
+cexec modern-app sh -c "uv run honcho -f Procfile.dev start & echo \$! > /tmp/dhcpapp-dev.pid; wait" \
   > /tmp/dhcpapp-dev.log 2>&1 &
 ```
 

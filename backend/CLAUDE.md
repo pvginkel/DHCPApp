@@ -8,41 +8,41 @@ This is a DHCP monitoring application backend designed for homelab environments.
 ## Development Commands
 
 ### Running commands in this environment
-This repo runs inside a KubeCoder pod, where Poetry lives in the `modern-app` tool container rather than the main dev container. The curated verbs are `kc project setup|build|test|lint` (optionally with `--project backend`), run from the repo root `/work/DHCPApp`. The `poetry ...` commands shown below are the underlying commands these wrap; when running them by hand, prefix them with `cexec modern-app` (e.g. `cexec modern-app poetry run pytest`).
+This repo runs inside a KubeCoder pod, where uv lives in the `modern-app` tool container rather than the main dev container. The curated verbs are `kc project setup|build|test|lint` (optionally with `--project backend`), run from the repo root `/work/DHCPApp`. The `uv ...` commands shown below are the underlying commands these wrap; when running them by hand, prefix them with `cexec modern-app` (e.g. `cexec modern-app uv run pytest`).
 
 ### Python Environment Setup
-This project uses Poetry for dependency management:
+This project uses uv for dependency management:
 ```bash
-poetry install        # Install dependencies
-poetry shell          # Activate the virtual environment
+uv sync               # Install dependencies into .venv
+uv run <command>      # Run a command in that environment
 ```
 
 ### Running the Application
-- **Development**: `poetry run dev` (Werkzeug auto-reload). Note the entry point is `run.py`.
+- **Development**: `uv run dev` (Werkzeug auto-reload). Note the entry point is `run.py`.
 - **Full dev stack** (backend + frontend + SSE gateway together): `scripts/dev.py` from the repo root; logs land in `logs/`.
-- **Production**: Set `FLASK_ENV=production`, then `poetry run dev`.
+- **Production**: Set `FLASK_ENV=production`, then `uv run dev`.
 - **Container images**: Built by Jenkins from the root `Jenkinsfile` with kaniko, publishing `registry:5000/dhcpapp`. There is no local Docker build — the dev environment has no Docker daemon.
 
 ### Code Quality
 Before committing, run all checks with a single command:
 ```bash
-poetry run check   # Runs ruff, mypy, vulture, and pytest
+uv run check   # Runs ruff, mypy, vulture, and pytest
 ```
 
 Or run individual tools:
 ```bash
-poetry run ruff check .                                           # Linting
-poetry run mypy .                                                 # Type checking
-poetry run vulture app/ vulture_whitelist.py --min-confidence 80  # Dead code detection
-poetry run pytest                                                 # Full test suite
+uv run ruff check .                                           # Linting
+uv run mypy .                                                 # Type checking
+uv run vulture app/ vulture_whitelist.py --min-confidence 80  # Dead code detection
+uv run pytest                                                 # Full test suite
 ```
 
 `kc project lint --project backend` runs the same ruff/mypy/vulture trio without pytest.
 
 ### Testing
-- **Run all tests**: `poetry run pytest`
-- **Run with coverage**: `poetry run pytest --cov=app`
-- **Single test file**: `poetry run pytest tests/test_dhcp_service.py`
+- **Run all tests**: `uv run pytest`
+- **Run with coverage**: `uv run pytest --cov=app`
+- **Single test file**: `uv run pytest tests/test_dhcp_service.py`
 - **Test API endpoints**: Use `curl -4` for IPv4-only requests (e.g., `curl -4 -s http://localhost:3301/api/dhcp/leases`)
 
 ### Configuration
@@ -73,7 +73,7 @@ The application implements dnsmasq's configuration parsing rules:
 - Cross-references lease data with static assignments
 
 ### File Structure
-- `run.py` - Application entry point (Poetry script `dev`)
+- `run.py` - Application entry point (the `dev` entry in `[project.scripts]`)
 - `app/config.py`, `app/app_config.py` - Configuration classes for different environments
 - `app/` - Main application package with API, models, services, and utilities
 - `data/` - Test data directory with sample dnsmasq configuration and lease files
@@ -92,7 +92,7 @@ The application implements dnsmasq's configuration parsing rules:
 - Use OOP design patterns
 - Write Python type annotations for all functions and methods
 - Use Python logging instead of print statements for debugging/info
-- Track dependencies in `pyproject.toml` (Poetry)
+- Track dependencies in `pyproject.toml` (uv)
 - Keep .gitignore files brief and minimal
 - Write only necessary code - avoid scaffolding or "future-useful" helper methods
 - Don't start the Flask app automatically in development code

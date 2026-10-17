@@ -93,7 +93,7 @@ BACKEND_URL=http://localhost:3301
 cexec modern-app scripts/dev.py
 
 # ...or just the backend, from backend/
-cexec modern-app poetry run dev
+cexec modern-app uv run dev
 ```
 
 ### Generation Fails
