@@ -9,6 +9,8 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.config import dump_config_for_logging
+
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -37,6 +39,10 @@ class AppSettings(BaseModel):
     root_path: str = ""
     update_mac_vendor_database: bool = True
     dev_fake_lease_changes: bool = False
+
+    def dump_for_logging(self) -> dict[str, str]:
+        """Every setting, for the boot log. None of them is a secret."""
+        return dump_config_for_logging(self)
 
     @classmethod
     def load(cls, env: "AppEnvironment | None" = None, flask_env: str = "development") -> "AppSettings":
