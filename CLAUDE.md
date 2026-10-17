@@ -16,16 +16,23 @@ The three components are what `kc project list` returns; each subproject has its
 `docs/`.
 
 - **Root** — the `run-suite` orchestrator (`tools/suite_runner/`, CI's single entry point), the
-  shared `Procfile.dev` dev stack and its `scripts/dev.py` launcher, the two Jenkinsfiles, and the
-  repo-wide docs in `docs/`. Declares no tests: the suites belong to the components.
+  shared `Procfile.dev` dev stack and its `scripts/dev.py` launcher, the `Jenkinsfile` and the
+  `Jenkinsfile.architecture` that publishes the architecture model, and the repo-wide docs in
+  `docs/`. Declares no tests: the suites belong to the components.
 - **`backend/`** — the Flask REST + SSE API (Python, uv). Reads a sample dnsmasq tree from
   `backend/data/` in development and testing; mounts the real one in production.
 - **`frontend/`** — the React 19 + Vite SPA (TypeScript, pnpm) with TanStack Router/Query, an
   OpenAPI-generated client, and a Playwright E2E suite that boots backend and SSE gateway per worker.
 
 Everything builds through `kc project build|test|lint|setup`, run **from the repo root** — those
-verbs are cwd-bound. The toolchain lives in the `modern-app` sidecar, so ad-hoc `uv`/`pnpm`
-commands need `cexec modern-app`. `scripts/dev.py` starts all three services together.
+verbs are cwd-bound. The toolchain lives in the `modern-app` sidecar, so ad-hoc `uv`/`pnpm` commands
+need `cexec modern-app`. `scripts/dev.py` starts all three services together and
+`scripts/dev.py stop` stops them from another shell. The root and `backend/` are two uv projects,
+each with its own committed `uv.lock`, because CI and the image sync `--locked`. After a backend API
+change, `scripts/regenerate-openapi.py --frontend` refreshes the frontend's OpenAPI cache and
+client; a backend test fails while the committed cache is stale.
+`cexec modern-app python3 scripts/check_updates.py` reports the dependencies with a newer release,
+major, minor and patch, in every component it finds.
 
 The spec repo is `../DHCPAppSpecs` (private): slices, plans and each run's state. It is a **separate
 git repo** — commit there separately.
@@ -61,6 +68,20 @@ Code changes go through the `dev` plugin's slice workflow — `/dev:triage` → 
 `/dev:run-slice` — which the operator drives; **never start a run yourself.** The project's half of
 the contract is `.aiworkflowrc` and `.kubecoder/project.yaml`; nothing the pipeline reads by machine
 belongs in this file.
+
+## Architecture model
+
+DHCPApp is a producer in the estate's federated architecture model. Its two models are
+hand-authored, the backend's in `backend/docs/architecture/*.yaml` and the frontend's in
+`frontend/docs/architecture/*.yaml`. `Jenkinsfile.architecture`, the job `AaC/DHCPApp`, validates
+each against the architecture service on every push and archives them for AaC/Architecture to
+collect.
+
+The model is kept current centrally, not from here: the central architecture update in
+`pvginkel/Architecture` (`tooling/fleet.py update`) reads the commits since the model last changed
+and commits what they change in it. Nothing needs to run here after a change.
+
+`Jenkinsfile.architecture` is the app's own, and `copier update` leaves it alone.
 
 ## Key documentation
 
