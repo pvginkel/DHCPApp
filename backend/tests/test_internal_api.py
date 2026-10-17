@@ -4,6 +4,8 @@ from unittest.mock import patch
 
 from flask.testing import FlaskClient
 
+from app.services.sse_connection_manager import BROADCAST_TARGET
+
 
 class TestNotifyLeaseChange:
     """Tests for POST /internal/notify-lease-change."""
@@ -30,6 +32,6 @@ class TestNotifyLeaseChange:
 
         mock_send_event.assert_called_once()
         call_args = mock_send_event.call_args
-        assert call_args[0][0] is None  # Broadcast (no specific request_id)
+        assert call_args[0][0] == BROADCAST_TARGET
         assert call_args[0][2] == "data_changed"
         assert call_args[0][3] == "dhcp"

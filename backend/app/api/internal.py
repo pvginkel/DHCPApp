@@ -13,7 +13,10 @@ from app.app_config import AppSettings
 from app.services.container import ServiceContainer
 from app.services.dev_lease_modifier import DevLeaseModifier
 from app.services.dhcp_service import DhcpService
-from app.services.sse_connection_manager import SSEConnectionManager
+from app.services.sse_connection_manager import (
+    BROADCAST_TARGET,
+    SSEConnectionManager,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -42,12 +45,14 @@ def notify_lease_change(
     else:
         dhcp_service.reload_lease_cache()
 
-    # Broadcast data_changed event via SSE Gateway
+    # Broadcast data_changed via the SSE Gateway. The leases are one shared
+    # view that every signed-in user reads, and dnsmasq's push carries no
+    # subject, so every connection is the narrowest target that reaches them.
     event_data = {
         "event_type": "data_changed",
         "timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
-    sse_connection_manager.send_event(None, event_data, "data_changed", "dhcp")
+    sse_connection_manager.send_event(BROADCAST_TARGET, event_data, "data_changed", "dhcp")
 
     return jsonify({
         "status": "success",
