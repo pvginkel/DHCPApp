@@ -2,8 +2,9 @@
 #
 # `modern-app` rather than `python` + `frontend`: the Playwright harness boots the
 # Flask backend and the SSE gateway per worker (frontend/tests/support/process/servers.ts),
-# so a single command needs both toolsets in the same container. `iac` and
-# `aac-tools` are the sibling repos', not this repo's — see the `repos:` entries below.
+# so a single command needs both toolsets in the same container. `iac` is the
+# sibling repos', not this repo's — see the `repos:` entries below; `aac-tools` is
+# theirs too, and runs this repo's architecture lint.
 #
 # No data-store sidecars: the backend reads dnsmasq lease and config files off
 # disk, and the app has no database and no object store. Development and testing
@@ -45,10 +46,12 @@ capabilities:
 tools:
   - use: modern-app
   # `iac` is for DnsmasqDeploy's Helm chart and Terraform, and for the kubectl
-  # Dnsmasq's validation runner drives its Job with; `aac-tools` is for
-  # DnsmasqDeploy's chart dependencies and for DnsmasqDeploy's and Dnsmasq's
-  # architecture producers. Nothing in this repo uses either.
+  # Dnsmasq's validation runner drives its Job with; nothing in this repo uses it.
   - use: iac
+  # arch-validate, for this repo's architecture models (the root lint in
+  # project.yaml; the AaC/DHCPApp job runs the same command), and for
+  # DnsmasqDeploy's chart dependencies and DnsmasqDeploy's and Dnsmasq's
+  # architecture producers.
   - use: aac-tools
 
 ports:

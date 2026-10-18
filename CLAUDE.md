@@ -75,7 +75,7 @@ DHCPApp is a producer in the estate's federated architecture model. Its two mode
 hand-authored, the backend's in `backend/docs/architecture/*.yaml` and the frontend's in
 `frontend/docs/architecture/*.yaml`. `Jenkinsfile.architecture`, the job `AaC/DHCPApp`, validates
 each against the architecture service on every push and archives them for AaC/Architecture to
-collect.
+collect; `kc project lint` validates them too (`arch-validate`, in the `aac-tools` sidecar).
 
 The model is kept current centrally, not from here: the central architecture update in
 `pvginkel/Architecture` (`tooling/fleet.py update`) reads the commits since the model last changed
