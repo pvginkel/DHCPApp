@@ -45,7 +45,7 @@ def notify_lease_change(
     else:
         dhcp_service.reload_lease_cache()
 
-    # Broadcast data_changed via the SSE Gateway. The leases are one shared
+    # Broadcast data_changed over SSE. The leases are one shared
     # view that every signed-in user reads, and dnsmasq's push carries no
     # subject, so every connection is the narrowest target that reaches them.
     event_data = {
