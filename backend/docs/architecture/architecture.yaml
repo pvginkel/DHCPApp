@@ -45,13 +45,6 @@ relations:
     target: svc:dhcpapp-api,a5f9d4f7-2ee8-4c14-bf89-b59054699d5f
     type: Assignment
 
-  - id: rel:dhcpapp-consumes-ssegateway
-    source: app:dhcpapp,4396ad25-8251-4429-a154-3f8c11a8b6fc
-    target: svc:ssegateway,59a7d043-bb0c-4e44-a8b8-3e943338f807
-    type: Association
-    boundBy: "env:SSE_GATEWAY_URL"
-    boundByDefaultValue: "http://localhost:3302"
-
   - id: rel:dhcpapp-consumes-iam
     source: app:dhcpapp,4396ad25-8251-4429-a154-3f8c11a8b6fc
     target: cap:iam

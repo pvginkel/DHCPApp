@@ -44,18 +44,11 @@ relations:
     target: svc:dhcpapp-ui-web,b7228a02-7a61-4b43-aea7-6cb2f14b9471
     type: Assignment
 
-  # Frontend -> backend: the SPA consumes the DHCP App REST API.
+  # Frontend -> backend: the SPA consumes the DHCP App REST API, the SSE event
+  # stream (/api/sse/stream) included.
   # Same-producer ref now that backend and frontend are one repo: the target is
   # declared in backend/docs/architecture/architecture.yaml under `dhcpapp`.
   - id: rel:dhcpapp-ui-consumes-api
     source: app:dhcpapp-ui,56e0795a-4140-40b6-84b3-7a2efb3bc9f5
     target: svc:dhcpapp-api,a5f9d4f7-2ee8-4c14-bf89-b59054699d5f
-    type: Association
-
-  # Frontend -> SSE gateway: the SPA opens an EventSource to /api/sse/stream
-  # (nginx-proxied to the gateway) to receive real-time lease updates.
-  # Cross-producer ref to the ssegateway ApplicationService.
-  - id: rel:dhcpapp-ui-consumes-ssegateway
-    source: app:dhcpapp-ui,56e0795a-4140-40b6-84b3-7a2efb3bc9f5
-    target: svc:ssegateway,59a7d043-bb0c-4e44-a8b8-3e943338f807
     type: Association
