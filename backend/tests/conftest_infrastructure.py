@@ -72,8 +72,6 @@ def _build_test_settings() -> Settings:
         # SSE
         sse_heartbeat_interval=1,
         frontend_version_url="http://localhost:3300/version.json",
-        sse_gateway_url="http://localhost:3302",
-        sse_callback_secret="",
         # OIDC Authentication (disabled for most tests)
         baseurl="http://localhost:3300",
         oidc_enabled=False,
