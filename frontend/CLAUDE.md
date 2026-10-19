@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Running commands in this environment
-This repo runs inside a KubeCoder pod where pnpm and Node live in the `modern-app` tool container, not the main dev container. The curated verbs are `kc project setup|build|test|lint [--project FRONTEND]`, run from the repo root. Ad-hoc commands are prefixed with `cexec modern-app` (e.g. `cexec modern-app pnpm check`). The whole dev stack (backend + frontend + SSE gateway) starts together with `scripts/dev.py` from the repo root.
+This repo runs inside a KubeCoder pod where pnpm and Node live in the `modern-app` tool container, not the main dev container. The curated verbs are `kc project setup|build|test|lint [--project FRONTEND]`, run from the repo root. Ad-hoc commands are prefixed with `cexec modern-app` (e.g. `cexec modern-app pnpm check`). The whole dev stack (backend + frontend) starts together with `scripts/dev.py` from the repo root.
 
 ### Essential Commands
 - `pnpm dev` - Start development server on port 3300
@@ -99,7 +99,7 @@ src/
 
 ## Development Workflow
 
-1. Start backend server first (only needed for `pnpm generate:api`; `scripts/dev.py` from the repo root starts backend, frontend and gateway together)
+1. Start backend server first (only needed for `pnpm generate:api`; `scripts/dev.py` from the repo root starts backend and frontend together)
 2. Run `pnpm generate:api` to generate current API client
 3. Start development with `pnpm dev`
 4. Run `pnpm check` before commits
@@ -114,9 +114,8 @@ src/
 - Build output goes to `dist/` directory
 
 ### Backend URL for Dev Proxy and API Generation
-- `BACKEND_URL` - Backend host for Vite dev proxy and OpenAPI generation (defaults to `http://localhost:3301`)
-- `SSE_GATEWAY_URL` - SSE gateway host for Vite dev proxy (defaults to `http://localhost:3302`)
-- Set these in your environment or `.env.local` if the backend is on a different host
+- `BACKEND_URL` - Backend host for Vite dev proxy (the SSE stream included) and OpenAPI generation (defaults to `http://localhost:3301`)
+- Set it in your environment or `.env.local` if the backend is on a different host
 
 ## Product brief
 
@@ -125,4 +124,4 @@ src/
 
 ## Testing
 
-There is a full Playwright end-to-end test suite. Config lives at `playwright.config.ts` and specs live under `tests/`. The suite boots its own backend, frontend and SSE gateway per worker on free ports, so nothing needs starting first. Run it with `pnpm playwright test`, or `kc project test --project FRONTEND` from the repo root. There is one `chromium` project running with 2 workers. Tests tagged `@slow` are excluded unless `INCLUDE_SLOW_TESTS` is set. Follow the established patterns and update this documentation when adding tests.
+There is a full Playwright end-to-end test suite. Config lives at `playwright.config.ts` and specs live under `tests/`. The suite boots its own backend and frontend per worker on free ports, so nothing needs starting first. Run it with `pnpm playwright test`, or `kc project test --project FRONTEND` from the repo root. There is one `chromium` project running with 2 workers. Tests tagged `@slow` are excluded unless `INCLUDE_SLOW_TESTS` is set. Follow the established patterns and update this documentation when adding tests.

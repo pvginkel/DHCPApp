@@ -19,7 +19,7 @@ uv run <command>      # Run a command in that environment
 
 ### Running the Application
 - **Development**: `uv run dev` (Werkzeug auto-reload). Note the entry point is `run.py`.
-- **Full dev stack** (backend + frontend + SSE gateway together): `scripts/dev.py` from the repo root; logs land in `logs/`.
+- **Full dev stack** (backend + frontend together): `scripts/dev.py` from the repo root; logs land in `logs/`.
 - **Production**: Set `FLASK_ENV=production`, then `uv run dev`.
 - **Container images**: Built by Jenkins from the root `Jenkinsfile` with kaniko, publishing `registry:5000/dhcpapp`. There is no local Docker build — the dev environment has no Docker daemon.
 

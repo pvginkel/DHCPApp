@@ -51,8 +51,8 @@ kc project lint       # backend: ruff, mypy, vulture; frontend: pnpm check
 ## 2. The live check
 
 Boot the dev stack the way this repo does — `Procfile.dev` under honcho, inside the `modern-app`
-sidecar — and exercise the ports `.kubecoder/config.yaml` publishes: frontend 3300, backend 3301,
-SSE gateway 3302.
+sidecar — and exercise the ports `.kubecoder/config.yaml` publishes: frontend 3300, backend 3301
+(which serves the SSE stream too).
 
 ```bash
 cexec modern-app sh -c "uv run honcho -f Procfile.dev start & echo \$! > /tmp/dhcpapp-dev.pid; wait" \
@@ -60,7 +60,7 @@ cexec modern-app sh -c "uv run honcho -f Procfile.dev start & echo \$! > /tmp/dh
 ```
 
 The pid file is written **from inside the sidecar**, and that is the point: killing the local `cexec`
-client does not reach the honcho it started, and leaves all three services orphaned on their ports.
+client does not reach the honcho it started, and leaves both services orphaned on their ports.
 The pod shares one PID namespace, so the pid honcho reports there is signallable from here.
 
 Wait for the stack to come up (poll `http://localhost:3300/` and
@@ -69,15 +69,14 @@ Wait for the stack to come up (poll `http://localhost:3300/` and
 ```bash
 curl -sS -o /dev/null -w 'frontend      %{http_code}\n' http://localhost:3300/
 curl -sS -o /dev/null -w 'backend ready %{http_code}\n' http://localhost:3301/health/readyz
-curl -sS -o /dev/null -w 'gateway ready %{http_code}\n' http://localhost:3302/readyz
 curl -sS -o /dev/null -w 'leases direct %{http_code}\n' http://localhost:3301/api/dhcp/leases
 curl -sS -o /dev/null -w 'leases proxy  %{http_code}\n' http://localhost:3300/api/dhcp/leases
 ```
 
-All five answer `200`. **The last one is the one that matters** and is not redundant: it goes through
-Vite's dev proxy, which is what proves the frontend is wired to *this* backend rather than three
-unrelated processes happening to be up. Readiness alone is not enough either — `/health/readyz` only
-checks the SSE gateway, and the backend has shipped in a state where readyz was green while every
+All four answer `200`. **The last one is the one that matters** and is not redundant: it goes through
+Vite's dev proxy, which is what proves the frontend is wired to *this* backend rather than two
+unrelated processes happening to be up. Readiness alone is not enough either — `/health/readyz` has
+no checks in this app, and the backend has shipped in a state where readyz was green while every
 `/api/dhcp/*` request failed. Hit real data, and compare what it returns against what the slice
 changed.
 
@@ -91,7 +90,7 @@ Then stop it:
 kill "$(cat /tmp/dhcpapp-dev.pid)"
 ```
 
-honcho SIGTERMs all three children. Confirm all three ports are free afterwards with a socket connect
+honcho SIGTERMs both children. Confirm both ports are free afterwards with a socket connect
 (`(exec 3<>/dev/tcp/127.0.0.1/3300)`), **not** an HTTP probe — the backend 404s on `/`, so a `curl`
 against a live server reads as "free" and the next run dies on `Address already in use`. Leave no
 survivors: an orphaned Vite or Flask holds the port for every later phase.

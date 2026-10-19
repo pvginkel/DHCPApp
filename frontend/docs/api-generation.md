@@ -89,7 +89,7 @@ BACKEND_URL=http://localhost:3301
 ### Backend Not Accessible
 
 ```bash
-# Start the whole dev stack (backend + frontend + SSE gateway), from the repo root
+# Start the whole dev stack (backend + frontend), from the repo root
 cexec modern-app scripts/dev.py
 
 # ...or just the backend, from backend/

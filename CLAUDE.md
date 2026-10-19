@@ -22,7 +22,7 @@ The three components are what `kc project list` returns; each subproject has its
 - **`backend/`** — the Flask REST + SSE API (Python, uv). Reads a sample dnsmasq tree from
   `backend/data/` in development and testing; mounts the real one in production.
 - **`frontend/`** — the React 19 + Vite SPA (TypeScript, pnpm) with TanStack Router/Query, an
-  OpenAPI-generated client, and a Playwright E2E suite that boots backend and SSE gateway per worker.
+  OpenAPI-generated client, and a Playwright E2E suite that boots the backend per worker.
 
 Everything builds through `kc project build|test|lint|setup`, run **from the repo root** — those
 verbs are cwd-bound. The toolchain lives in the `modern-app` sidecar, so ad-hoc `uv`/`pnpm` commands

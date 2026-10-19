@@ -65,7 +65,7 @@ not a substitute — the point of the test is that it runs again next time.
 | `frontend` | Playwright E2E, under `frontend/tests/` | `kc project test --project frontend` |
 | `root` | none — orchestration and CI only | declares no tests, green by definition |
 
-The Playwright suite boots its own backend, frontend and SSE gateway per worker on free ports, so an
+The Playwright suite boots its own backend and frontend per worker on free ports, so an
 end-to-end test is as cheap to write as a unit test here; reach for one when the behaviour spans the
 two sides. A change that genuinely cannot be covered by either suite is a change whose testability
 problem is the first thing to solve — say so and fix the seam, rather than shipping it uncovered.

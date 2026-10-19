@@ -1,8 +1,8 @@
 # KubeCoder environment manifest for the DHCPApp monorepo.
 #
 # `modern-app` rather than `python` + `frontend`: the Playwright harness boots the
-# Flask backend and the SSE gateway per worker (frontend/tests/support/process/servers.ts),
-# so a single command needs both toolsets in the same container. `iac` is the
+# Flask backend per worker (frontend/tests/support/process/servers.ts), so a
+# single command needs both toolsets in the same container. `iac` is the
 # sibling repos', not this repo's — see the `repos:` entries below; `aac-tools` is
 # theirs too, and runs this repo's architecture lint.
 #
@@ -61,7 +61,4 @@ ports:
     sslOffload: true
   - name: backend
     port: 3301
-    type: http
-  - name: sse-gateway
-    port: 3302
     type: http
